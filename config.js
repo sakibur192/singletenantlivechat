@@ -4,7 +4,7 @@
 // ============================================================
 module.exports = {
   // HTTP port the server listens on
-  PORT: 4000,
+  PORT: 3010,
 
   // PostgreSQL connection string. Tables are created automatically on first start.
   DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:5432/livesupport',
@@ -13,10 +13,11 @@ module.exports = {
   // CHANGE THIS before going live (40+ random characters).
   APP_SECRET: 'change-me-to-a-very-long-random-secret-string-1234567890',
 
-  // Public URL of this server (used in the embed snippet shown in the admin panel)
-  PUBLIC_URL: 'http://localhost:4000',
+  // Public URL of this server (used in the embed snippet shown in the admin panel).
+  // When you add a domain + SSL, change this to e.g. 'https://support.yourdomain.com'
+  PUBLIC_URL: 'http://187.127.145.228:3010',
 
-  // true when served over HTTPS (production). Makes cookies Secure.
+  // true ONLY when served over HTTPS. Must stay false on plain http://IP:3010 or login will not work.
   COOKIE_SECURE: false,
 
   // Set true when running behind Nginx / Coolify / Cloudflare so real client IPs are used
@@ -33,9 +34,11 @@ module.exports = {
 
   // File uploads (stored on local disk)
   UPLOAD_DIR: __dirname + '/uploads',
-  MAX_UPLOAD_MB: 10,
+  MAX_UPLOAD_MB: 25,
+  // Every image/* and audio/* type is accepted (jpg, png, gif, webp, heic, avif, bmp, svg, tiff,
+  // voice notes in webm/ogg/opus/m4a/aac/mp3/wav/amr/3gp…). Extra document types allowed:
+  ALLOWED_MIME_PREFIXES: ['image/', 'audio/'],
   ALLOWED_MIME: [
-    'image/png', 'image/jpeg', 'image/gif', 'image/webp',
     'application/pdf', 'text/plain',
     'application/zip',
     'application/msword',

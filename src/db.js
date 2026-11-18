@@ -40,7 +40,7 @@ DO $$ BEGIN
   CREATE TYPE sender_type AS ENUM ('customer','agent','system');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
-  CREATE TYPE message_type AS ENUM ('text','image','file','internal_note','system');
+  CREATE TYPE message_type AS ENUM ('text','image','file','audio','internal_note','system');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE TYPE agent_presence AS ENUM ('online','away','busy','offline');
@@ -187,6 +187,9 @@ CREATE TABLE IF NOT EXISTS messages (
   UNIQUE (conversation_id, client_message_id)
 );
 
+-- reply / quote (WhatsApp style)
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id UUID REFERENCES messages(id) ON DELETE SET NULL;
+
 CREATE TABLE IF NOT EXISTS message_attachments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
@@ -197,8 +200,11 @@ CREATE TABLE IF NOT EXISTS message_attachments (
   mime_type VARCHAR(100) NOT NULL,
   file_size BIGINT NOT NULL,
   storage_key TEXT NOT NULL,
+  duration_ms INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE message_attachments ADD COLUMN IF NOT EXISTS duration_ms INTEGER;
+ALTER TABLE message_attachments ADD COLUMN IF NOT EXISTS thumb_key TEXT;
 
 CREATE TABLE IF NOT EXISTS canned_responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -293,6 +299,8 @@ function verifyPassword(pw, stored) {
 
 async function migrate() {
   await q(SCHEMA);
+  // upgrade databases created before voice messages existed
+  await q(`ALTER TYPE message_type ADD VALUE IF NOT EXISTS 'audio'`);
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
     await q(`INSERT INTO settings(key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`, [key, value]);
   }

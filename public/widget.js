@@ -15,15 +15,15 @@
     en: { search: 'Search for answers…', faq: 'Frequently asked questions', live: 'Start live chat', liveSub: 'Talk to our support team', back: 'Back', helpful: 'Was this helpful?', yes: 'Yes', no: 'No', thanks: 'Thanks for your feedback!',
       related: 'Related questions', more: 'More questions', stillHelp: 'Still need help?', enterId: 'Please enter your {label} to continue.', cont: 'Continue', welcome: 'Welcome to Live Support!',
       type: 'Type a message…', online: 'We are online', offline: 'We are offline', noResult: 'No matching questions', resolved: 'This chat has been resolved.', rate: 'How was your experience?', rated: 'Thank you for rating us!',
-      newChat: 'Start a new chat', typing: 'is typing…', failed: 'Not sent — tap to retry', attach: 'Attach file', sending: 'Sending…', error: 'Something went wrong. Please try again.', name: 'Your name (optional)', history: 'Your conversations', poweredBy: 'Live Support', you: 'You', agent: 'Support' },
+      newChat: 'Start a new chat', typing: 'is typing…', failed: 'Not sent — tap to retry', attach: 'Attach file', sending: 'Sending…', error: 'Something went wrong. Please try again.', name: 'Your name (optional)', history: 'Your conversations', poweredBy: 'Live Support', you: 'You', agent: 'Support', reply: 'Reply', voice: 'Voice message', photo: 'Photo', recording: 'Recording…', noMic: 'Microphone not available (needs HTTPS and permission).' },
     bn: { search: 'উত্তর খুঁজুন…', faq: 'সাধারণ প্রশ্নাবলি', live: 'লাইভ চ্যাট শুরু করুন', liveSub: 'আমাদের সাপোর্ট টিমের সাথে কথা বলুন', back: 'পেছনে', helpful: 'এটি কি সাহায্য করেছে?', yes: 'হ্যাঁ', no: 'না', thanks: 'মতামতের জন্য ধন্যবাদ!',
       related: 'সম্পর্কিত প্রশ্ন', more: 'আরও প্রশ্ন', stillHelp: 'আরও সাহায্য লাগবে?', enterId: 'চালিয়ে যেতে আপনার {label} দিন।', cont: 'চালিয়ে যান', welcome: 'লাইভ সাপোর্টে স্বাগতম!',
       type: 'মেসেজ লিখুন…', online: 'আমরা অনলাইনে আছি', offline: 'আমরা এখন অফলাইনে', noResult: 'কোনো প্রশ্ন পাওয়া যায়নি', resolved: 'চ্যাটটি সমাধান করা হয়েছে।', rate: 'আপনার অভিজ্ঞতা কেমন ছিল?', rated: 'রেটিং দেওয়ার জন্য ধন্যবাদ!',
-      newChat: 'নতুন চ্যাট শুরু করুন', typing: 'লিখছেন…', failed: 'পাঠানো যায়নি — আবার চেষ্টা করুন', attach: 'ফাইল যুক্ত করুন', sending: 'পাঠানো হচ্ছে…', error: 'সমস্যা হয়েছে। আবার চেষ্টা করুন।', name: 'আপনার নাম (ঐচ্ছিক)', history: 'আপনার কথোপকথন', poweredBy: 'লাইভ সাপোর্ট', you: 'আপনি', agent: 'সাপোর্ট' },
+      newChat: 'নতুন চ্যাট শুরু করুন', typing: 'লিখছেন…', failed: 'পাঠানো যায়নি — আবার চেষ্টা করুন', attach: 'ফাইল যুক্ত করুন', sending: 'পাঠানো হচ্ছে…', error: 'সমস্যা হয়েছে। আবার চেষ্টা করুন।', name: 'আপনার নাম (ঐচ্ছিক)', history: 'আপনার কথোপকথন', poweredBy: 'লাইভ সাপোর্ট', you: 'আপনি', agent: 'সাপোর্ট', reply: 'উত্তর দিন', voice: 'ভয়েস মেসেজ', photo: 'ছবি', recording: 'রেকর্ড হচ্ছে…', noMic: 'মাইক্রোফোন পাওয়া যায়নি (HTTPS ও অনুমতি লাগবে)।' },
   };
 
   var cfg = null, t = T.en, root, shadow, panel, launcher, badge;
-  var state = { open: false, screen: 'home', session: null, conv: null, messages: [], socket: null, unread: 0, online: false, faqCache: null, attachment: null, rated: {} };
+  var state = { open: false, screen: 'home', session: null, conv: null, messages: [], socket: null, unread: 0, online: false, faqCache: null, replyTo: null, rated: {} };
   var history = [];
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -88,6 +88,25 @@
       '.m.s{align-self:center;background:#e0f2fe;color:#075985;font-size:12px;text-align:center;max-width:90%;border-radius:10px}' +
       '.m .nm{font-size:11px;font-weight:700;color:' + p + ';margin-bottom:2px}.m .tm{font-size:10.5px;opacity:.7;text-align:right;margin-top:2px}' +
       '.m.fail{opacity:.6;cursor:pointer}.m img{max-width:100%;max-height:220px;border-radius:8px;display:block}.m .fl{display:flex;gap:6px;align-items:center;color:inherit;text-decoration:none;padding:4px 0}' +
+      '.mw{display:flex;align-items:center;gap:4px;max-width:86%;transition:transform .15s}.mw.c{align-self:flex-end;flex-direction:row-reverse}.mw.a{align-self:flex-start}.mw .m{max-width:100%}' +
+      '.mw.hl .m{box-shadow:0 0 0 3px ' + p + '66}' +
+      '.rp{opacity:0;border:0;background:#e2e8f0;color:#334155;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;flex-shrink:0;transition:opacity .15s}.mw:hover .rp,.rp:focus{opacity:1}' +
+      '@media(hover:none){.rp{display:none}}' +
+      '.qt{border-left:3px solid ' + p + ';background:rgba(0,0,0,.06);border-radius:6px;padding:4px 8px;margin:2px 0 4px;cursor:pointer;font-size:12.5px;display:flex;flex-direction:column;min-width:0}' +
+      '.m.c .qt{background:rgba(255,255,255,.2);border-left-color:#fff}' +
+      '.qt b{font-size:12px;color:' + p + '}.m.c .qt b{color:#fff}.qt span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85;max-width:240px}' +
+      '.m.media{padding:4px}.m.media .tm{padding:0 6px 2px}.m .ph{display:block;max-width:240px;max-height:260px;width:auto;border-radius:10px;cursor:zoom-in;background:#e2e8f0;min-width:80px;min-height:60px;object-fit:cover}' +
+      '.m .tx{padding:0}.m.media .tx{padding:4px 6px 0}' +
+      '.vn{display:flex;align-items:center;gap:8px;min-width:200px;padding:4px 4px 0}' +
+      '.vp{width:36px;height:36px;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + p + '}.vp svg{width:18px;height:18px;fill:#fff}' +
+      '.m.c .vp{background:#fff}.m.c .vp svg{fill:' + p + '}' +
+      '.vt{flex:1;display:flex;flex-direction:column;gap:3px}.vb{height:6px;border-radius:3px;background:rgba(0,0,0,.15);cursor:pointer;position:relative;overflow:hidden}.m.c .vb{background:rgba(255,255,255,.35)}' +
+      '.vb i{position:absolute;left:0;top:0;bottom:0;width:0;background:' + p + ';border-radius:3px}.m.c .vb i{background:#fff}.vd{font-size:11px;opacity:.8}.vm{font-size:16px}' +
+      '.rbar{display:flex;align-items:center;gap:6px;padding:6px 10px 0;background:#fff;border-top:1px solid #e2e8f0}.rbar .qt{flex:1;margin:0;cursor:default}' +
+      '.recb{flex:1;display:flex;align-items:center;gap:8px;padding:0 6px;font-size:14px;color:#dc2626}.recb small{color:#64748b}' +
+      '.recb .dot{width:10px;height:10px;border-radius:50%;background:#dc2626;animation:lsblink 1s infinite}@keyframes lsblink{50%{opacity:.2}}' +
+      '.lb{position:absolute;inset:0;background:rgba(0,0,0,.88);z-index:5;align-items:center;justify-content:center}.lb img{max-width:96%;max-height:92%;border-radius:6px}.lb .x{position:absolute;top:12px;right:12px}' +
+      '.ib.snd svg{width:20px;height:20px}' +
       '.typ{padding:0 14px 6px;font-size:12px;color:#64748b;font-style:italic;min-height:20px;background:#f8fafc}' +
       '.cmp{border-top:1px solid #e2e8f0;padding:10px;display:flex;gap:8px;align-items:flex-end;background:#fff;flex-shrink:0}' +
       '.cmp textarea{flex:1;border:1px solid #e2e8f0;border-radius:20px;padding:10px 14px;font-size:14px;resize:none;max-height:120px;min-height:42px;outline:none;line-height:1.4}.cmp textarea:focus{border-color:' + p + '}' +
@@ -260,7 +279,7 @@
     f.onsubmit = function (e) {
       e.preventDefault(); var btn = f.querySelector('button'); btn.disabled = true; $('#ls-err').textContent = '';
       identify({ player_id: f.pid.value.trim(), name: f.nm.value.trim() }).then(function () { history.pop(); state.screen = 'chat'; render(); })
-        .catch(function (err) { $('#ls-err').textContent = err.message; btn.disabled = false; });
+        .catch(function (err) { var el = $('#ls-err'); if (el) el.textContent = err.message; btn.disabled = false; });
     };
   }
   function alertErr(e) { var el = $('#ls-err') || $('.typ'); if (el) el.textContent = e.message || t.error; }
@@ -278,39 +297,66 @@
   }
 
   // ---------------------------------------------------------- chat
+  // WhatsApp-style: photos (many at once, compressed before upload), voice notes, swipe/hover to reply.
+  var MIC = '<svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 003-3V6a3 3 0 10-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.9V22h2v-3.1A7 7 0 0019 12h-2z"/></svg>';
+  var PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+  var PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
+  var rec = null; // active voice recording
+
   function renderChat() {
     var agent = state.conv && state.conv.agent_name;
     panel.innerHTML = header(true, cfg.title, agent ? esc(agent) : null) +
       (!state.online ? '<div class="bnr">' + esc(cfg.offline_message) + '</div>' : '') +
       '<div class="bd" id="ls-bd"><div class="msgs" id="ls-msgs"></div></div><div class="typ" id="ls-typ"></div>' +
-      '<div id="ls-chip"></div><div class="cmp">' +
-      (cfg.enable_attachments ? '<button class="ib" id="ls-att" title="' + t.attach + '">📎</button><input type="file" id="ls-file" style="display:none" accept="image/*,.pdf,.txt,.zip,.doc,.docx">' : '') +
-      '<textarea id="ls-ta" rows="1" placeholder="' + t.type + '" maxlength="5000"></textarea><button class="ib snd" id="ls-send" aria-label="Send">' + ICONS.send + '</button></div>';
+      '<div id="ls-reply"></div>' +
+      '<div class="cmp" id="ls-cmp">' +
+      (cfg.enable_attachments ? '<button class="ib" id="ls-att" title="' + t.attach + '">📎</button><input type="file" id="ls-file" style="display:none" multiple accept="image/*,audio/*,.pdf,.txt,.zip,.doc,.docx">' : '') +
+      '<textarea id="ls-ta" rows="1" placeholder="' + t.type + '" maxlength="5000"></textarea>' +
+      '<button class="ib snd" id="ls-send" aria-label="Send">' + (cfg.enable_attachments ? MIC : ICONS.send) + '</button></div>' +
+      '<div class="lb" id="ls-lb" style="display:none"><img alt=""><button class="x" data-lbx>✕</button></div>';
     bindHeader();
+    drawReplyBar();
     drawMessages();
     var ta = $('#ls-ta'); var typingOn = false, tt;
     var stop = function () { if (typingOn && state.socket && state.conv) { typingOn = false; state.socket.emit('customer:typing:stop', { conversation_id: state.conv.id }); } };
+    var sendBtn = $('#ls-send');
+    var refreshBtn = function () {
+      var voice = cfg.enable_attachments && !ta.value.trim();
+      sendBtn.innerHTML = voice ? MIC : ICONS.send;
+      sendBtn.setAttribute('aria-label', voice ? t.voice : 'Send');
+    };
     ta.oninput = function () {
       ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px';
+      refreshBtn();
       if (state.socket && state.conv) {
         if (!typingOn) typingOn = true;
         state.socket.emit('customer:typing:start', { conversation_id: state.conv.id, preview: ta.value.slice(-120) });
         clearTimeout(tt); tt = setTimeout(stop, 2500);
       }
     };
-    ta.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); stop(); send(); } };
-    $('#ls-send').onclick = function () { stop(); send(); };
+    ta.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); stop(); send(); refreshBtn(); } };
+    sendBtn.onclick = function () {
+      stop();
+      if (cfg.enable_attachments && !ta.value.trim()) startRecording(); else { send(); refreshBtn(); }
+    };
     if (cfg.enable_attachments) {
-      $('#ls-att').onclick = function () {
-        if (!state.conv) { $('#ls-typ').textContent = t.type; return ta.focus(); }
-        $('#ls-file').click();
-      };
-      $('#ls-file').onchange = function (e) { var f = e.target.files[0]; e.target.value = ''; if (f) uploadFile(f); };
+      $('#ls-att').onclick = function () { $('#ls-file').click(); };
+      $('#ls-file').onchange = function (e) { var files = Array.prototype.slice.call(e.target.files); e.target.value = ''; sendFiles(files); };
+      ta.addEventListener('paste', function (e) {
+        var items = (e.clipboardData && e.clipboardData.files) ? Array.prototype.slice.call(e.clipboardData.files) : [];
+        if (items.length) { e.preventDefault(); sendFiles(items); }
+      });
+      var bd = $('#ls-bd');
+      bd.addEventListener('dragover', function (e) { e.preventDefault(); });
+      bd.addEventListener('drop', function (e) { e.preventDefault(); sendFiles(Array.prototype.slice.call(e.dataTransfer.files || [])); });
     }
+    $('[data-lbx]').onclick = function () { $('#ls-lb').style.display = 'none'; };
+    $('#ls-lb').onclick = function (e) { if (e.target.id === 'ls-lb') $('#ls-lb').style.display = 'none'; };
     connect();
     if (state.conv && !state.messages.length) loadHistory();
     ta.focus();
   }
+
   function loadHistory() {
     if (!state.conv) return Promise.resolve();
     return api('GET', '/conversations/' + state.conv.id + '/messages').then(function (r) {
@@ -320,20 +366,43 @@
       drawMessages(); markRead();
     }).catch(function (e) { if (e.status === 404) { state.conv = null; state.messages = []; drawMessages(); } });
   }
+
+  function fmtDur(ms) { var s = Math.max(0, Math.round((ms || 0) / 1000)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function quoteName(r) { return r.sender_type === 'customer' ? t.you : (r.sender_name || t.agent); }
+  function quoteText(m) {
+    if (m.content) return m.content;
+    var a = (m.attachments || [])[0];
+    if (a && a.mime_type.indexOf('audio/') === 0) return '🎤 ' + t.voice;
+    if (a && a.mime_type.indexOf('image/') === 0) return '📷 ' + t.photo;
+    return a ? '📎 ' + a.file_name : '';
+  }
+  function attUrl(u) { return /^(blob:|https?:)/.test(u) ? u : BASE + u; }
+
   function msgHtml(m) {
     if (m.message_type === 'system' || m.sender_type === 'system') return '<div class="m s">' + linkify(m.content) + '</div>';
     var mine = m.sender_type === 'customer';
     var atts = (m.attachments || []).map(function (a) {
-      var url = BASE + a.url;
-      return a.mime_type.indexOf('image/') === 0 ? '<a href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="' + esc(a.file_name) + '"></a>'
-        : '<a class="fl" href="' + esc(url) + '" target="_blank" rel="noopener">📄 ' + esc(a.file_name) + '</a>';
+      var url = attUrl(a.url);
+      if (a.mime_type.indexOf('image/') === 0) {
+        return '<img class="ph" src="' + esc(attUrl(a.thumb_url || a.url)) + '" data-full="' + esc(url) + '" alt="' + esc(a.file_name || '') + '" loading="lazy">';
+      }
+      if (a.mime_type.indexOf('audio/') === 0) {
+        return '<div class="vn" data-src="' + esc(url) + '" data-dur="' + (a.duration_ms || 0) + '"><button class="vp" aria-label="Play">' + PLAY + '</button>' +
+          '<div class="vt"><div class="vb"><i></i></div><span class="vd">' + fmtDur(a.duration_ms) + '</span></div><span class="vm">🎤</span></div>';
+      }
+      return '<a class="fl" href="' + esc(url) + '" target="_blank" rel="noopener">📄 ' + esc(a.file_name) + '</a>';
     }).join('');
+    var q = m.reply_to ? '<div class="qt" data-goto="' + esc(m.reply_to.id) + '"><b>' + esc(quoteName(m.reply_to)) + '</b><span>' + esc(m.reply_to.content || '') + '</span></div>' : '';
     var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     var status = mine ? (m._failed ? ' · ' + t.failed : m._pending ? ' · 🕓' : m.read_at ? ' · ✓✓' : ' · ✓') : '';
-    return '<div class="m ' + (mine ? 'c' : 'a') + (m._failed ? ' fail' : '') + '" data-cid="' + esc(m.client_message_id || '') + '">' +
-      (!mine ? '<div class="nm">' + esc(m.sender_name || t.agent) + '</div>' : '') + atts + (m.content ? '<div>' + linkify(m.content) + '</div>' : '') +
-      '<div class="tm">' + time + status + '</div></div>';
+    var canReply = m.id && !m._pending && !m._failed;
+    return '<div class="mw ' + (mine ? 'c' : 'a') + '" data-mid="' + esc(m.id || '') + '">' +
+      '<div class="m ' + (mine ? 'c' : 'a') + (m._failed ? ' fail' : '') + ((m.attachments || []).length && !m.content ? ' media' : '') + '" data-cid="' + esc(m.client_message_id || '') + '">' +
+      (!mine ? '<div class="nm">' + esc(m.sender_name || t.agent) + '</div>' : '') + q + atts + (m.content ? '<div class="tx">' + linkify(m.content) + '</div>' : '') +
+      '<div class="tm">' + time + status + '</div></div>' +
+      (canReply ? '<button class="rp" data-reply="' + esc(m.id) + '" title="' + t.reply + '">↩</button>' : '') + '</div>';
   }
+
   function drawMessages() {
     var box = $('#ls-msgs'); if (!box) return;
     var html = state.messages.length ? state.messages.map(msgHtml).join('') : '<div class="m a"><div class="nm">' + esc(state.company || t.agent) + '</div>' + linkify(cfg.welcome_message) + '</div>';
@@ -342,7 +411,11 @@
       html += '<div class="rate" id="ls-rate">' + t.rate + '<div class="stars">' + [1, 2, 3, 4, 5].map(function (n) { return '<span data-r="' + n + '">★</span>'; }).join('') + '</div></div>';
     }
     box.innerHTML = html;
-    $$('.m.fail').forEach(function (el) { el.onclick = function () { retry(el.dataset.cid); }; });
+    bindMessages(box);
+    if (player) { // keep a playing voice note playing across redraws
+      var again = Array.prototype.slice.call(box.querySelectorAll('.vn')).filter(function (v) { return v.dataset.src === player.src; })[0];
+      if (again) { player.el = again; again.querySelector('.vp').innerHTML = player.audio.paused ? PLAY : PAUSE; } else stopPlayback();
+    }
     $$('[data-r]').forEach(function (s) {
       s.onmouseenter = function () { $$('[data-r]').forEach(function (x) { x.classList.toggle('on', +x.dataset.r <= +s.dataset.r); }); };
       s.onclick = function () {
@@ -353,7 +426,203 @@
     });
     scrollBottom();
   }
+
   function scrollBottom() { var bd = $('#ls-bd'); if (bd) bd.scrollTop = bd.scrollHeight; }
+
+  function bindMessages(box) {
+    $$('.m.fail').forEach(function (el) { el.onclick = function () { retry(el.dataset.cid); }; });
+    $$('[data-reply]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); setReply(b.dataset.reply); }; });
+    $$('.ph').forEach(function (img) { img.onclick = function () { var lb = $('#ls-lb'); lb.querySelector('img').src = img.dataset.full; lb.style.display = 'flex'; }; });
+    $$('[data-goto]').forEach(function (q) {
+      q.onclick = function () {
+        var el = box.querySelector('[data-mid="' + q.dataset.goto + '"]');
+        if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('hl'); setTimeout(function () { el.classList.remove('hl'); }, 1200); }
+      };
+    });
+    $$('.vn').forEach(function (v) {
+      v.querySelector('.vp').onclick = function () { togglePlay(v); };
+      v.querySelector('.vb').onclick = function (e) { seek(v, e); };
+    });
+    // swipe right on a message to reply (touch screens)
+    $$('.mw').forEach(function (w) {
+      var x0 = null, dx = 0, id = w.dataset.mid;
+      if (!id) return;
+      w.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; dx = 0; }, { passive: true });
+      w.addEventListener('touchmove', function (e) { if (x0 == null) return; dx = Math.max(0, Math.min(80, e.touches[0].clientX - x0)); w.style.transform = 'translateX(' + dx + 'px)'; }, { passive: true });
+      w.addEventListener('touchend', function () { w.style.transform = ''; if (dx > 55) setReply(id); x0 = null; });
+    });
+  }
+
+  // ---- reply / quote
+  function setReply(id) {
+    var m = state.messages.find(function (x) { return x.id === id; });
+    if (!m) return;
+    state.replyTo = m; drawReplyBar();
+    var ta = $('#ls-ta'); if (ta) ta.focus();
+  }
+  function drawReplyBar() {
+    var box = $('#ls-reply'); if (!box) return;
+    var m = state.replyTo;
+    if (!m) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div class="rbar"><div class="qt"><b>' + esc(quoteName(m)) + '</b><span>' + esc(quoteText(m)) + '</span></div><button class="ib" id="ls-rx">✕</button></div>';
+    $('#ls-rx').onclick = function () { state.replyTo = null; drawReplyBar(); };
+  }
+  function takeReply() { var r = state.replyTo; state.replyTo = null; drawReplyBar(); return r ? r.id : null; }
+
+  // ---- voice note player (one at a time)
+  var player = null;
+  function stopPlayback() {
+    if (!player) return;
+    player.audio.pause();
+    var b = player.el && player.el.querySelector('.vp'); if (b) b.innerHTML = PLAY;
+    player = null;
+  }
+  function togglePlay(v) {
+    if (player && player.src === v.dataset.src) {
+      if (player.audio.paused) { player.audio.play(); v.querySelector('.vp').innerHTML = PAUSE; } else { player.audio.pause(); v.querySelector('.vp').innerHTML = PLAY; }
+      return;
+    }
+    stopPlayback();
+    var audio = new Audio(v.dataset.src);
+    var dur = +v.dataset.dur || 0;
+    var p = player = { el: v, audio: audio, src: v.dataset.src };
+    var total = function () { return isFinite(audio.duration) && audio.duration > 0 ? audio.duration * 1000 : dur; };
+    audio.ontimeupdate = function () {
+      var bar = p.el.querySelector('.vb i'), lbl = p.el.querySelector('.vd');
+      if (total()) bar.style.width = Math.min(100, audio.currentTime * 1000 / total() * 100) + '%';
+      lbl.textContent = fmtDur(audio.currentTime * 1000);
+    };
+    audio.onended = function () {
+      p.el.querySelector('.vb i').style.width = '0%'; p.el.querySelector('.vd').textContent = fmtDur(dur);
+      p.el.querySelector('.vp').innerHTML = PLAY; if (player === p) player = null;
+    };
+    audio.play().then(function () { p.el.querySelector('.vp').innerHTML = PAUSE; }).catch(function () { var ty = $('#ls-typ'); if (ty) ty.textContent = t.error; });
+  }
+  function seek(v, e) {
+    if (!player || player.src !== v.dataset.src) return togglePlay(v);
+    var a = player.audio; var tot = isFinite(a.duration) && a.duration > 0 ? a.duration : (+v.dataset.dur || 0) / 1000;
+    var rect = e.currentTarget.getBoundingClientRect();
+    if (tot) a.currentTime = tot * Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  }
+
+  // ---- voice recording
+  function pickMime() {
+    var list = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/aac'];
+    if (!window.MediaRecorder) return null;
+    for (var i = 0; i < list.length; i++) if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(list[i])) return list[i];
+    return '';
+  }
+  function startRecording() {
+    if (rec) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || pickMime() === null) {
+      $('#ls-typ').textContent = t.noMic; return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then(function (stream) {
+      var mime = pickMime();
+      var mr = mime ? new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 32000 }) : new MediaRecorder(stream);
+      rec = { mr: mr, stream: stream, chunks: [], start: Date.now(), cancel: false };
+      mr.ondataavailable = function (e) { if (e.data && e.data.size) rec.chunks.push(e.data); };
+      mr.onstop = function () {
+        var r = rec; rec = null;
+        r.stream.getTracks().forEach(function (tr) { tr.stop(); });
+        clearInterval(r.timer);
+        renderComposerBack();
+        var ms = Date.now() - r.start;
+        if (r.cancel || ms < 700) return;
+        var type = (mr.mimeType || mime || 'audio/webm').split(';')[0];
+        var ext = type.indexOf('mp4') >= 0 ? 'm4a' : type.indexOf('ogg') >= 0 ? 'ogg' : type.indexOf('aac') >= 0 ? 'aac' : 'webm';
+        var blob = new Blob(r.chunks, { type: type });
+        sendMedia(new File([blob], 'voice-' + Date.now() + '.' + ext, { type: type }), ms, '');
+      };
+      mr.start(250);
+      var cmp = $('#ls-cmp');
+      cmp.innerHTML = '<button class="ib" id="ls-rcx" title="Cancel">🗑</button><div class="recb"><i class="dot"></i><span id="ls-rt">0:00</span><small>' + t.recording + '</small></div>' +
+        '<button class="ib snd" id="ls-rsend">' + ICONS.send + '</button>';
+      rec.timer = setInterval(function () {
+        var el = $('#ls-rt'); if (el) el.textContent = fmtDur(Date.now() - rec.start);
+        if (Date.now() - rec.start > 5 * 60000) mr.stop(); // 5 minute limit
+      }, 250);
+      $('#ls-rcx').onclick = function () { rec.cancel = true; mr.stop(); };
+      $('#ls-rsend').onclick = function () { mr.stop(); };
+    }).catch(function () { $('#ls-typ').textContent = t.noMic; });
+  }
+  function renderComposerBack() {
+    // rebuild the normal composer after recording (keeps messages & reply bar)
+    if (state.screen !== 'chat') return;
+    var keep = state.replyTo; render(); state.replyTo = keep; drawReplyBar();
+  }
+
+  // ---- image compression (like WhatsApp: max 1600px, JPEG ~75%)
+  function compressImage(file) {
+    return new Promise(function (resolve) {
+      if (!/^image\//.test(file.type) || /gif|svg/.test(file.type)) return resolve(file);
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var max = 1600, w = img.naturalWidth, h = img.naturalHeight;
+        var s = Math.min(1, max / Math.max(w, h));
+        var cw = Math.round(w * s), ch = Math.round(h * s);
+        try {
+          var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+          var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cw, ch); cx.drawImage(img, 0, 0, cw, ch);
+          cv.toBlob(function (b) {
+            if (!b || (b.size >= file.size && s === 1)) return resolve(file);
+            resolve(new File([b], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+          }, 'image/jpeg', 0.75);
+        } catch (e) { resolve(file); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(file); }; // e.g. HEIC on Chrome → server converts
+      img.src = url;
+    });
+  }
+
+  function ensureConversation() {
+    if (state.conv) return Promise.resolve(state.conv);
+    return api('POST', '/conversations', {}).then(function (r) {
+      state.conv = r.conversation;
+      if (state.socket) state.socket.emit('customer:conversation:join', { conversation_id: state.conv.id }, function () {});
+      return state.conv;
+    });
+  }
+
+  function sendFiles(files) {
+    if (!files.length) return;
+    var ta = $('#ls-ta'); var caption = ta ? ta.value.trim() : '';
+    if (caption) { ta.value = ''; ta.style.height = 'auto'; }
+    files.slice(0, 10).forEach(function (f, i) { sendMedia(f, 0, i === 0 ? caption : ''); });
+  }
+
+  // Shows the photo/voice immediately, compresses, uploads, then sends as a message.
+  function sendMedia(file, durationMs, caption, retryMsg) {
+    var cid = retryMsg ? retryMsg.client_message_id : uid();
+    var replyId = retryMsg ? retryMsg._replyId : takeReply();
+    var local = retryMsg || {
+      client_message_id: cid, sender_type: 'customer', message_type: 'text', content: caption || null, created_at: new Date().toISOString(),
+      _pending: true, _file: file, _dur: durationMs, _replyId: replyId,
+      reply_to: replyId ? (function (r) { return r ? { id: r.id, sender_type: r.sender_type, sender_name: r.sender_name, content: quoteText(r) } : null; })(state.messages.find(function (x) { return x.id === replyId; })) : null,
+      attachments: [{ mime_type: file.type || 'application/octet-stream', file_name: file.name, url: URL.createObjectURL(file), duration_ms: durationMs }],
+    };
+    local._pending = true; local._failed = false;
+    upsertMessage(local); drawMessages();
+    var prep = /^image\//.test(file.type) ? compressImage(file) : Promise.resolve(file);
+    prep.then(function (f) {
+      return ensureConversation().then(function () {
+        var fd = new FormData();
+        fd.append('conversation_id', state.conv.id);
+        if (durationMs) fd.append('duration_ms', String(Math.round(durationMs)));
+        fd.append('file', f, f.name);
+        return api('POST', '/uploads', fd, true);
+      });
+    }).then(function (att) {
+      local._attachment = att;
+      send({ content: caption || '', client_message_id: cid, _attachment: att, _replyId: replyId, _local: local });
+    }).catch(function (e) {
+      local._pending = false; local._failed = true; upsertMessage(local); drawMessages();
+      $('#ls-typ').textContent = e.message || t.error;
+    });
+  }
+
   function upsertMessage(m) {
     var i = -1;
     for (var k = 0; k < state.messages.length; k++) {
@@ -363,17 +632,21 @@
     if (i >= 0) state.messages[i] = m; else state.messages.push(m);
   }
 
-  function send(retryMsg) {
+  // Sends text (or an already-uploaded attachment). Retry-safe: same client_message_id never duplicates.
+  function send(opt) {
+    opt = opt || {};
     var ta = $('#ls-ta');
-    var content = retryMsg ? retryMsg.content : ta.value.trim();
-    var att = retryMsg ? retryMsg._attachment : state.attachment;
+    var content = opt.content != null ? opt.content : (ta ? ta.value.trim() : '');
+    var att = opt._attachment || null;
     if (!content && !att) return;
-    var cid = retryMsg ? retryMsg.client_message_id : uid();
-    if (!retryMsg) { ta.value = ''; ta.style.height = 'auto'; state.attachment = null; var chip = $('#ls-chip'); if (chip) chip.innerHTML = ''; }
-    var local = { client_message_id: cid, sender_type: 'customer', message_type: 'text', content: content, created_at: new Date().toISOString(), _pending: true, _attachment: att,
-      attachments: att ? [att] : [] };
+    var cid = opt.client_message_id || uid();
+    var replyId = opt._replyId !== undefined ? opt._replyId : takeReply();
+    if (opt.content == null && ta) { ta.value = ''; ta.style.height = 'auto'; }
+    var local = opt._local || { client_message_id: cid, sender_type: 'customer', message_type: 'text', content: content, created_at: new Date().toISOString(), attachments: [], _replyId: replyId,
+      reply_to: replyId ? (function (r) { return r ? { id: r.id, sender_type: r.sender_type, sender_name: r.sender_name, content: quoteText(r) } : null; })(state.messages.find(function (x) { return x.id === replyId; })) : null };
+    local._pending = true; local._failed = false;
     upsertMessage(local); drawMessages();
-    var payload = { conversation_id: state.conv ? state.conv.id : null, content: content, client_message_id: cid, attachment_id: att ? att.id : null };
+    var payload = { conversation_id: state.conv ? state.conv.id : null, content: content, client_message_id: cid, attachment_id: att ? att.id : null, reply_to_id: replyId };
     var done = function (r) {
       if (r.conversation && (!state.conv || state.conv.id !== r.conversation.id)) {
         var switched = state.conv && state.conv.id !== r.conversation.id;
@@ -402,18 +675,9 @@
   }
   function retry(cid) {
     var m = state.messages.find(function (x) { return x.client_message_id === cid; });
-    if (m) { m._failed = false; send(m); }
-  }
-  function uploadFile(f) {
-    var chip = $('#ls-chip');
-    chip.innerHTML = '<span class="chip">' + t.sending + ' ' + esc(f.name) + '</span>';
-    var fd = new FormData(); fd.append('conversation_id', state.conv.id); fd.append('file', f);
-    api('POST', '/uploads', fd, true).then(function (a) {
-      state.attachment = a;
-      chip.innerHTML = '<span class="chip">📎 ' + esc(a.file_name) + ' <button id="ls-rm">✕</button></span>';
-      $('#ls-rm').onclick = function () { state.attachment = null; chip.innerHTML = ''; };
-      $('#ls-ta').focus();
-    }).catch(function (e) { chip.innerHTML = '<span class="chip" style="color:#dc2626">' + esc(e.message) + '</span>'; });
+    if (!m) return;
+    if (m._file && !m._attachment) return sendMedia(m._file, m._dur, m.content, m);
+    send({ content: m.content || '', client_message_id: m.client_message_id, _attachment: m._attachment, _replyId: m._replyId, _local: m });
   }
   function markRead() {
     if (state.open && state.screen === 'chat' && state.socket && state.socket.connected && state.conv && document.visibilityState === 'visible') {
@@ -475,13 +739,13 @@
         if (!state.conv || c.id !== state.conv.id) return;
         var agentChanged = c.agent_name !== state.conv.agent_name;
         state.conv = Object.assign({}, state.conv, c);
-        if (state.screen === 'chat') { if (agentChanged) render(); else drawMessages(); }
+        if (state.screen === 'chat') { if (agentChanged && !rec) { var keep = state.replyTo; render(); state.replyTo = keep; drawReplyBar(); } else drawMessages(); }
       });
       s.on('chat:agent:online', function () { setOnline(true); });
       s.on('chat:agent:offline', function () { setOnline(false); });
     }).catch(function () { console.warn('[LiveSupport] realtime unavailable'); });
   }
-  function setOnline(v) { if (state.online === v) return; state.online = v; if (state.screen !== 'chat' || !$('#ls-ta') || !$('#ls-ta').value) render(); }
+  function setOnline(v) { if (state.online === v) return; state.online = v; if (rec) return; if (state.screen !== 'chat' || !$('#ls-ta') || !$('#ls-ta').value) render(); }
   function ping() {
     try {
       var A = window.AudioContext || window.webkitAudioContext; if (!A) return;

@@ -215,3 +215,40 @@ tr.click:hover td { background: #f8fafc; }
   .inbox { grid-template-columns: 0 260px minmax(0,1fr); } .ib-views { display: none; }
   .g4, .g3 { grid-template-columns: repeat(2, 1fr); } .kb, .wp-wrap, .g2 { grid-template-columns: 1fr; }
 }
+
+/* ---- WhatsApp-style media, voice & replies ---- */
+.msg { padding-right: 10px; }
+.msg .reply-btn { position: absolute; top: 4px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  cursor: pointer; opacity: 0; transition: opacity .15s; font-size: 13px; z-index: 2; }
+.msg.customer .reply-btn { right: -34px; }
+.msg.agent .reply-btn, .msg.note .reply-btn { left: -34px; }
+.msg:hover .reply-btn { opacity: 1; }
+.msg.flash { box-shadow: 0 0 0 3px rgba(22,163,74,.55); transition: box-shadow .2s; }
+.msg.failed { opacity: .7; cursor: pointer; }
+.msg .quote, .reply-bar .quote { border-left: 3px solid var(--pri); background: rgba(0,0,0,.05); border-radius: 6px; padding: 4px 8px; margin: 2px 0 5px;
+  display: flex; flex-direction: column; cursor: pointer; font-size: 12.5px; min-width: 120px; white-space: normal; }
+.msg .quote b, .reply-bar .quote b { color: var(--pri-d); font-size: 12px; }
+.msg .quote span, .reply-bar .quote span { color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; }
+.reply-bar { display: flex; gap: 8px; align-items: center; background: #fff; border-radius: 10px; padding: 6px 8px; margin-bottom: 6px; }
+.reply-bar .quote { flex: 1; margin: 0; cursor: default; }
+.msg.media { padding: 4px 4px 3px; }
+.msg.media .mt { padding: 0 6px; }
+.msg img { max-width: 280px; max-height: 300px; min-width: 90px; min-height: 60px; object-fit: cover; background: #e2e8f0; border-radius: 8px; display: block; cursor: zoom-in; }
+.msg .mtext { white-space: pre-wrap; }
+.msg.media .mtext { padding: 4px 6px 0; }
+.vn { display: flex; align-items: center; gap: 8px; min-width: 240px; padding: 4px 2px 0; }
+.vn .vp { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--pri); color: #fff; cursor: pointer; font-size: 14px; flex-shrink: 0; }
+.vn .vt { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.vn .vb { height: 6px; border-radius: 3px; background: rgba(0,0,0,.13); position: relative; overflow: hidden; cursor: pointer; }
+.vn .vb i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--pri); border-radius: 3px; }
+.vn .vd { font-size: 11px; color: var(--muted); }
+.vn .vm { font-size: 18px; }
+.vn .vdl { font-size: 13px; color: var(--muted); text-decoration: none; }
+
+.rec-bar { flex: 1; display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 20px; padding: 10px 16px; color: var(--danger); }
+.rec-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 70; display: flex; align-items: center; justify-content: center; }
+.lightbox.hidden { display: none; }
+.lightbox img { max-width: 94vw; max-height: 90vh; border-radius: 6px; }
+.lightbox .btn { position: absolute; top: 16px; right: 16px; }

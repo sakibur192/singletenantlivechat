@@ -128,23 +128,51 @@ function fileUrl(att) {
   const sig = hmac(`${att.id}.${exp}`);
   return `/files/${att.id}?e=${exp}&s=${sig}`;
 }
-function serializeMessage(m, atts = []) {
+const serializeAttachment = (a) => {
+  const url = fileUrl(a);
+  return {
+    id: a.id, file_name: a.file_name, mime_type: a.mime_type, file_size: Number(a.file_size),
+    duration_ms: a.duration_ms || null, url, thumb_url: a.thumb_key ? url + '&t=1' : null,
+  };
+};
+function previewFor(type, content, mime) {
+  if (content) return content.slice(0, 140);
+  if (type === 'audio' || (mime && mime.startsWith('audio/'))) return '🎤 Voice message';
+  if (type === 'image' || (mime && mime.startsWith('image/'))) return '📷 Photo';
+  if (mime) return '📎 File';
+  return '';
+}
+function serializeMessage(m, atts = [], includeInternal = true) {
+  let replyTo = null;
+  if (m.r_id && (includeInternal || m.r_type !== 'internal_note')) {
+    replyTo = {
+      id: m.r_id, sender_type: m.r_sender_type, sender_name: m.r_sender_name || null, message_type: m.r_type,
+      content: previewFor(m.r_type, m.r_content, m.r_mime),
+    };
+  }
   return {
     id: m.id, conversation_id: m.conversation_id, sender_type: m.sender_type, sender_id: m.sender_id,
     sender_name: m.sender_name || null, message_type: m.message_type, content: m.content,
     client_message_id: m.client_message_id, delivered_at: m.delivered_at, read_at: m.read_at, created_at: m.created_at,
-    attachments: atts.map((a) => ({ id: a.id, file_name: a.file_name, mime_type: a.mime_type, file_size: Number(a.file_size), url: fileUrl(a) })),
+    reply_to: replyTo,
+    attachments: atts.map(serializeAttachment),
   };
 }
 async function loadMessages(where, params, includeInternal) {
   const rows = await many(`
-    SELECT m.*, COALESCE(u.display_name, u.name) AS sender_name
-    FROM messages m LEFT JOIN users u ON m.sender_type='agent' AND u.id=m.sender_id
+    SELECT m.*, COALESCE(u.display_name, u.name) AS sender_name,
+           r.id AS r_id, r.sender_type AS r_sender_type, r.message_type AS r_type, r.content AS r_content,
+           CASE WHEN r.sender_type='agent' THEN COALESCE(ru.display_name, ru.name) END AS r_sender_name,
+           (SELECT ra.mime_type FROM message_attachments ra WHERE ra.message_id=r.id LIMIT 1) AS r_mime
+    FROM messages m
+    LEFT JOIN users u ON m.sender_type='agent' AND u.id=m.sender_id
+    LEFT JOIN messages r ON r.id=m.reply_to_id
+    LEFT JOIN users ru ON r.sender_type='agent' AND ru.id=r.sender_id
     WHERE ${where} ${includeInternal ? '' : `AND m.message_type <> 'internal_note'`}
     ORDER BY m.created_at ASC`, params);
   if (!rows.length) return [];
   const atts = await many(`SELECT * FROM message_attachments WHERE message_id = ANY($1)`, [rows.map((r) => r.id)]);
-  return rows.map((m) => serializeMessage(m, atts.filter((a) => a.message_id === m.id)));
+  return rows.map((m) => serializeMessage(m, atts.filter((a) => a.message_id === m.id), includeInternal));
 }
 // customer-facing view of a message hides internal identities beyond display name
 const forCustomer = (msg) => ({ ...msg, sender_id: undefined });
@@ -252,30 +280,38 @@ async function setStatus(convId, status, user = null) {
 }
 
 // Insert a message (idempotent with client_message_id), update conversation, fan out real-time events.
-async function createMessage({ convId, senderType, senderId = null, type = 'text', content = null, clientId = null, attachmentId = null }) {
+async function createMessage({ convId, senderType, senderId = null, type = 'text', content = null, clientId = null, attachmentId = null, replyToId = null }) {
   let duplicate = false;
+  // reply/quote must point to a message in the same chat; a public message can never quote an internal note
+  let replyTo = null;
+  if (replyToId && isUuid(replyToId)) {
+    const r = await one(`SELECT id, message_type FROM messages WHERE id=$1 AND conversation_id=$2`, [replyToId, convId]);
+    if (r && (type === 'internal_note' || r.message_type !== 'internal_note')) replyTo = r.id;
+  }
   const msg = await tx(async (c) => {
     let m = (await c.query(`
-      INSERT INTO messages(conversation_id, sender_type, sender_id, message_type, content, client_message_id)
-      VALUES ($1,$2,$3,$4,$5,$6)
+      INSERT INTO messages(conversation_id, sender_type, sender_id, message_type, content, client_message_id, reply_to_id)
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
       ON CONFLICT (conversation_id, client_message_id) DO NOTHING RETURNING *`,
-      [convId, senderType, senderId, type, content, clientId])).rows[0];
+      [convId, senderType, senderId, type, content, clientId, replyTo])).rows[0];
     if (!m) {
       duplicate = true;
       return (await c.query(`SELECT * FROM messages WHERE conversation_id=$1 AND client_message_id=$2`, [convId, clientId])).rows[0];
     }
+    let mime = null;
     if (attachmentId) {
       const upd = await c.query(`UPDATE message_attachments SET message_id=$1 WHERE id=$2 AND conversation_id=$3 AND message_id IS NULL
                                  AND uploaded_by_type=$4::varchar AND uploaded_by_id IS NOT DISTINCT FROM $5::uuid RETURNING mime_type`,
         [m.id, attachmentId, convId, senderType, senderId]);
       if (!upd.rowCount) throw new HttpError(400, 'Invalid attachment');
+      mime = upd.rows[0].mime_type;
       if (type === 'text') {
-        const nt = upd.rows[0].mime_type.startsWith('image/') ? 'image' : 'file';
+        const nt = mime.startsWith('image/') ? 'image' : mime.startsWith('audio/') ? 'audio' : 'file';
         m = (await c.query(`UPDATE messages SET message_type=$2 WHERE id=$1 RETURNING *`, [m.id, nt])).rows[0];
       }
     }
     if (type !== 'internal_note') {
-      const preview = content ? content.slice(0, 140) : (attachmentId ? '📎 Attachment' : '');
+      const preview = previewFor(m.message_type, content, mime);
       await c.query(`
         UPDATE conversations SET last_message_at=NOW(), last_message_preview=$2, updated_at=NOW(),
           unread_agent = unread_agent + CASE WHEN $3='customer' THEN 1 ELSE 0 END,
@@ -431,7 +467,8 @@ A.get('/notifications/sync', ah(async (req, res) => {
   const items = await many(`
     SELECT m.id, m.conversation_id, m.content, m.message_type, m.created_at,
            cu.player_id, cu.name AS customer_name, c.assigned_agent_id, c.status, c.unread_agent,
-           (SELECT COUNT(*) FROM message_attachments a WHERE a.message_id=m.id)::int AS attachments
+           (SELECT COUNT(*) FROM message_attachments a WHERE a.message_id=m.id)::int AS attachments,
+           (SELECT a.mime_type FROM message_attachments a WHERE a.message_id=m.id LIMIT 1) AS attachment_mime
     FROM messages m
     JOIN conversations c ON c.id=m.conversation_id
     JOIN customers cu ON cu.id=c.customer_id
@@ -528,22 +565,22 @@ A.post('/conversations/:id/reply', ah(async (req, res) => {
   const content = str(req.body.content, 5000);
   const attachmentId = req.body.attachment_id && isUuid(req.body.attachment_id) ? req.body.attachment_id : null;
   if (!content && !attachmentId) fail(400, 'Message is empty');
-  const r = await agentSend(req.user, c, { content, attachmentId, clientId: str(req.body.client_message_id, 100), internal: false });
+  const r = await agentSend(req.user, c, { content, attachmentId, clientId: str(req.body.client_message_id, 100), internal: false, replyToId: req.body.reply_to_id });
   res.json(r);
 }));
 A.post('/conversations/:id/notes', ah(async (req, res) => {
   const c = await getConvForUser(req.user, req.params.id);
   const content = str(req.body.content, 5000, true, 'Note');
-  res.json(await agentSend(req.user, c, { content, clientId: str(req.body.client_message_id, 100), internal: true }));
+  res.json(await agentSend(req.user, c, { content, clientId: str(req.body.client_message_id, 100), internal: true, replyToId: req.body.reply_to_id }));
 }));
 
-async function agentSend(user, conv, { content, attachmentId, clientId, internal }) {
+async function agentSend(user, conv, { content, attachmentId, clientId, internal, replyToId }) {
   if (!internal && !conv.assigned_agent_id) {
     // replying to an unassigned chat claims it
     await assignConversation(conv.id, user.id, user, 'claimed_by_reply');
   }
   if (!internal && (conv.status === 'resolved' || conv.status === 'closed')) await setStatus(conv.id, 'open', user);
-  return createMessage({ convId: conv.id, senderType: 'agent', senderId: user.id, type: internal ? 'internal_note' : 'text', content, clientId, attachmentId: internal ? null : attachmentId });
+  return createMessage({ convId: conv.id, senderType: 'agent', senderId: user.id, type: internal ? 'internal_note' : 'text', content, clientId, attachmentId: internal ? null : attachmentId, replyToId });
 }
 
 A.patch('/conversations/:id/status', ah(async (req, res) => {
@@ -983,18 +1020,21 @@ A.get('/audit-logs', requireRole('admin'), ah(async (req, res) => {
 }));
 
 // ---------------- Uploads (agent) ----------------
+const normMime = (m) => String(m || '').split(';')[0].trim().toLowerCase();
+const mimeAllowed = (m) => config.ALLOWED_MIME.includes(m) || (config.ALLOWED_MIME_PREFIXES || []).some((p) => m.startsWith(p));
 const upload = multer({
   storage: multer.diskStorage({
     destination: config.UPLOAD_DIR,
     filename: (req, file, cb) => cb(null, crypto.randomUUID()),
   }),
   limits: { fileSize: config.MAX_UPLOAD_MB * 1024 * 1024, files: 1 },
-  fileFilter: (req, file, cb) => cb(config.ALLOWED_MIME.includes(file.mimetype) ? null : new HttpError(400, 'File type not allowed'), true),
+  fileFilter: (req, file, cb) => cb(mimeAllowed(normMime(file.mimetype)) ? null : new HttpError(400, 'File type not allowed'), true),
 });
 function sniffOk(filePath, mime) {
-  // basic magic-byte check for images/pdf so a renamed executable can't pose as an image
-  const buf = Buffer.alloc(12); const fd = fs.openSync(filePath, 'r'); fs.readSync(fd, buf, 0, 12, 0); fs.closeSync(fd);
+  // basic magic-byte check so a renamed executable can't pose as an image/pdf
+  const buf = Buffer.alloc(16); const fd = fs.openSync(filePath, 'r'); fs.readSync(fd, buf, 0, 16, 0); fs.closeSync(fd);
   const hex = buf.toString('hex');
+  if (hex.startsWith('4d5a') || hex.startsWith('7f454c46')) return false; // Windows .exe / Linux ELF
   if (mime === 'image/png') return hex.startsWith('89504e47');
   if (mime === 'image/jpeg') return hex.startsWith('ffd8ff');
   if (mime === 'image/gif') return hex.startsWith('47494638');
@@ -1002,14 +1042,60 @@ function sniffOk(filePath, mime) {
   if (mime === 'application/pdf') return hex.startsWith('25504446');
   return true;
 }
+
+// WhatsApp-style image handling: auto-rotate, strip EXIF/GPS, max 1600px, JPEG q75, plus a small thumbnail.
+const IMG = { maxSide: 1600, quality: 75, thumbSide: 360, thumbQuality: 55 };
+async function processImage(filePath, mime) {
+  if (!mime.startsWith('image/') || mime === 'image/svg+xml') return null;
+  let sharp;
+  try { sharp = require('sharp'); } catch { return null; } // sharp not installed → keep original
+  try {
+    const meta = await sharp(filePath, { failOn: 'none' }).metadata();
+    const animated = (meta.pages || 1) > 1; // animated GIF/WebP: keep original so it still moves
+    const out = { mime, size: fs.statSync(filePath).size, thumb: null, width: meta.width, height: meta.height };
+    if (!animated) {
+      const tmp = filePath + '.c';
+      const info = await sharp(filePath, { failOn: 'none' })
+        .rotate()
+        .resize({ width: IMG.maxSide, height: IMG.maxSide, fit: 'inside', withoutEnlargement: true })
+        .flatten({ background: '#ffffff' })
+        .jpeg({ quality: IMG.quality, mozjpeg: true, progressive: true })
+        .toFile(tmp);
+      const browserFriendly = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mime);
+      if (info.size < out.size || !browserFriendly) {
+        fs.renameSync(tmp, filePath);
+        Object.assign(out, { mime: 'image/jpeg', size: info.size, width: info.width, height: info.height, converted: true });
+      } else fs.unlinkSync(tmp);
+    }
+    const thumbPath = filePath + '_t';
+    await sharp(filePath, { failOn: 'none' }).rotate()
+      .resize({ width: IMG.thumbSide, height: IMG.thumbSide, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: IMG.thumbQuality }).toFile(thumbPath);
+    out.thumb = path.basename(thumbPath);
+    return out;
+  } catch (e) {
+    console.warn('image processing skipped:', e.message);
+    return null;
+  }
+}
+
 async function saveUpload(req, convId, byType, byId) {
   if (!req.file) fail(400, 'No file uploaded');
-  if (!sniffOk(req.file.path, req.file.mimetype)) { fs.unlink(req.file.path, () => {}); fail(400, 'File content does not match its type'); }
-  const name = path.basename(req.file.originalname).replace(/[^\w.\- ()]/g, '_').slice(0, 200) || 'file';
-  const a = await one(`INSERT INTO message_attachments(conversation_id, uploaded_by_type, uploaded_by_id, file_name, mime_type, file_size, storage_key)
-                       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-    [convId, byType, byId, name, req.file.mimetype, req.file.size, req.file.filename]);
-  return { id: a.id, file_name: a.file_name, mime_type: a.mime_type, file_size: Number(a.file_size), url: fileUrl(a) };
+  let mime = normMime(req.file.mimetype);
+  if (!sniffOk(req.file.path, mime)) { fs.unlink(req.file.path, () => {}); fail(400, 'File content does not match its type'); }
+  let name = path.basename(req.file.originalname || 'file').replace(/[^\w.\- ()]/g, '_').slice(0, 200) || 'file';
+  let size = req.file.size;
+  let thumb = null;
+  const img = await processImage(req.file.path, mime);
+  if (img) {
+    thumb = img.thumb;
+    if (img.converted) { mime = img.mime; size = img.size; name = name.replace(/\.[^.]+$/, '') + '.jpg'; }
+  }
+  const duration = mime.startsWith('audio/') ? int(req.body.duration_ms, 0, 0, 3600000) || null : null;
+  const a = await one(`INSERT INTO message_attachments(conversation_id, uploaded_by_type, uploaded_by_id, file_name, mime_type, file_size, storage_key, thumb_key, duration_ms)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+    [convId, byType, byId, name, mime, size, req.file.filename, thumb, duration]);
+  return serializeAttachment(a);
 }
 A.post('/uploads', upload.single('file'), ah(async (req, res) => {
   const c = await getConvForUser(req.user, req.body.conversation_id);
@@ -1173,7 +1259,7 @@ P.get('/conversations', requireCustomer, ah(async (req, res) => {
   res.json({ items: items.map((c) => ({ ...customerConvView(c), last_message_preview: c.last_message_preview })) });
 }));
 
-async function startConversation(s, { content, clientId, attachmentId, subject }) {
+async function startConversation(s, { content, clientId, attachmentId, subject, replyToId }) {
   // reuse an existing open conversation of this session instead of creating duplicates
   const existing = await one(`SELECT c.id FROM conversations c WHERE ${convAccessSql()} AND status IN ('open','pending') ORDER BY last_message_at DESC LIMIT 1`, convAccessParams(s));
   let convId; let isNew = false;
@@ -1184,7 +1270,7 @@ async function startConversation(s, { content, clientId, attachmentId, subject }
     await logEvent(convId, null, 'created', { player_id: s.player_id });
   }
   let message = null;
-  if (content || attachmentId) message = (await createMessage({ convId, senderType: 'customer', senderId: s.customer_id, content, clientId, attachmentId })).message;
+  if (content || attachmentId) message = (await createMessage({ convId, senderType: 'customer', senderId: s.customer_id, content, clientId, attachmentId, replyToId })).message;
   if (isNew) {
     const online = await supportIsOnline();
     if (!online) {
@@ -1203,7 +1289,7 @@ async function startConversation(s, { content, clientId, attachmentId, subject }
 }
 
 // Customer sends a message: handles reopen-vs-new for resolved chats
-async function customerSend(s, convId, { content, clientId, attachmentId }) {
+async function customerSend(s, convId, { content, clientId, attachmentId, replyToId }) {
   if (!rateLimit(`cmsg:${s.customer_id}`, config.RATE_LIMITS.customerMsgPerMinute)) fail(429, 'You are sending messages too fast');
   const c = await getCustomerConv(s, convId);
   if (c.status === 'resolved' || c.status === 'closed') {
@@ -1222,7 +1308,7 @@ async function customerSend(s, convId, { content, clientId, attachmentId }) {
       if (!a || !a.is_active) await assignConversation(c.id, null, null, 'agent_unavailable');
     }
   }
-  const r = await createMessage({ convId: c.id, senderType: 'customer', senderId: s.customer_id, content, clientId, attachmentId });
+  const r = await createMessage({ convId: c.id, senderType: 'customer', senderId: s.customer_id, content, clientId, attachmentId, replyToId });
   if (c.status === 'pending') await setStatus(c.id, 'open');
   return { conversation: customerConvView(await convSummary(c.id)), message: forCustomer(r.message), is_new: false };
 }
@@ -1243,7 +1329,7 @@ P.post('/conversations/:id/messages', requireCustomer, ah(async (req, res) => {
   const content = str(req.body.content, 5000);
   const attachmentId = isUuid(req.body.attachment_id) ? req.body.attachment_id : null;
   if (!content && !attachmentId) fail(400, 'Message is empty');
-  res.json(await customerSend(req.session, req.params.id, { content, clientId: str(req.body.client_message_id, 100), attachmentId }));
+  res.json(await customerSend(req.session, req.params.id, { content, clientId: str(req.body.client_message_id, 100), attachmentId, replyToId: req.body.reply_to_id }));
 }));
 P.post('/conversations/:id/rating', requireCustomer, ah(async (req, res) => {
   const c = await getCustomerConv(req.session, req.params.id);
@@ -1276,16 +1362,23 @@ app.get('/files/:id', ah(async (req, res) => {
   if (String(s).length !== expected.length || !crypto.timingSafeEqual(Buffer.from(String(s)), Buffer.from(expected))) fail(403, 'Invalid link');
   const a = await one(`SELECT * FROM message_attachments WHERE id=$1`, [req.params.id]);
   if (!a) fail(404, 'Not found');
-  const file = path.join(config.UPLOAD_DIR, path.basename(a.storage_key));
+  const wantThumb = req.query.t === '1' && a.thumb_key;
+  const file = path.join(config.UPLOAD_DIR, path.basename(wantThumb ? a.thumb_key : a.storage_key));
   if (!fs.existsSync(file)) fail(404, 'File missing');
-  const inline = a.mime_type.startsWith('image/') || a.mime_type === 'application/pdf';
-  res.set('Content-Type', a.mime_type);
-  res.set('X-Content-Type-Options', 'nosniff');
-  res.set('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.set('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename="${a.file_name.replace(/"/g, '')}"`);
-  fs.createReadStream(file).pipe(res);
+  const mime = wantThumb ? 'image/webp' : a.mime_type;
+  const inline = mime.startsWith('image/') || mime.startsWith('audio/') || mime === 'application/pdf';
+  // sendFile handles Range requests (needed for seeking in voice messages, esp. Safari/iOS)
+  res.sendFile(file, {
+    headers: {
+      'Content-Type': mime,
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox",
+      'Access-Control-Allow-Origin': '*',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+      'Cache-Control': 'private, max-age=3600',
+      'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${a.file_name.replace(/["\r\n]/g, '')}"`,
+    },
+  });
 }));
 
 // ------------------------------------------------------------
@@ -1410,13 +1503,13 @@ function customerSocket(socket) {
   }));
   socket.on('customer:conversation:leave', sh(async ({ conversation_id }) => { socket.leave(`cconv:${conversation_id}`); return {}; }));
 
-  socket.on('customer:message:send', sh(async ({ conversation_id, content, client_message_id, attachment_id }) => {
+  socket.on('customer:message:send', sh(async ({ conversation_id, content, client_message_id, attachment_id, reply_to_id }) => {
     const ss = await fresh();
     const text = str(content, 5000);
     const att = isUuid(attachment_id) ? attachment_id : null;
     if (!text && !att) fail(400, 'Message is empty');
     const r = conversation_id
-      ? await customerSend(ss, conversation_id, { content: text, clientId: str(client_message_id, 100), attachmentId: att })
+      ? await customerSend(ss, conversation_id, { content: text, clientId: str(client_message_id, 100), attachmentId: att, replyToId: reply_to_id })
       : await startConversation(ss, { content: text, clientId: str(client_message_id, 100) });
     socket.join(`cconv:${r.conversation.id}`);
     return r;
@@ -1483,14 +1576,14 @@ function agentSocket(socket) {
     return { conversation: c };
   }));
   socket.on('agent:conversation:leave', sh(async ({ conversation_id }) => { socket.leave(`aconv:${conversation_id}`); return {}; }));
-  socket.on('agent:message:send', sh(async ({ conversation_id, content, client_message_id, attachment_id, internal }) => {
+  socket.on('agent:message:send', sh(async ({ conversation_id, content, client_message_id, attachment_id, internal, reply_to_id }) => {
     const user = await freshUser();
     const c = await getConvForUser(user, conversation_id);
     const text = str(content, 5000);
     const att = isUuid(attachment_id) ? attachment_id : null;
     if (!text && !att) fail(400, 'Message is empty');
     if (internal && !text) fail(400, 'Note is empty');
-    return agentSend(user, c, { content: text, attachmentId: att, clientId: str(client_message_id, 100), internal: !!internal });
+    return agentSend(user, c, { content: text, attachmentId: att, clientId: str(client_message_id, 100), internal: !!internal, replyToId: reply_to_id });
   }));
   const typing = (on) => async ({ conversation_id } = {}) => {
     if (!isUuid(conversation_id) || !socket.rooms.has(`aconv:${conversation_id}`)) return;

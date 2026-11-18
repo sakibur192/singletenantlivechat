@@ -35,8 +35,17 @@ npm start
 ```
 On first start, every table is created automatically, along with the owner account and a few sample FAQs.
 
-- Admin panel → `http://localhost:4000/admin/` (default login `admin@example.com` / `Admin@12345`; **change the password** under *My profile*)
-- Widget demo page → `http://localhost:4000/demo`
+- Admin panel → `http://187.127.145.228:3010/admin/` (default login `admin@example.com` / `Admin@12345`; **change the password** under *My profile*)
+- Widget demo page → `http://187.127.145.228:3010/demo`
+
+`config.js` is already set to **port 3010** and `PUBLIC_URL: 'http://187.127.145.228:3010'`. Open the port on the VPS firewall: `ufw allow 3010/tcp`.
+
+### ⚠️ HTTPS: needed for two things
+Plain `http://IP:3010` works for the admin panel, the Android app and the `/demo` page, but browsers enforce two rules:
+1. **An https website cannot load the widget from an http server.** The browser blocks it as "mixed content". If your website is `https://…`, the support server needs HTTPS too.
+2. **Recording voice in a browser needs HTTPS.** The microphone only works on secure pages. Over plain http, the customer widget (on an http site) and the admin panel can still *receive and play* voice notes, and send photos, but not record. The **Android app records voice over plain http** without problems.
+
+Fix: point a (sub)domain at the server, e.g. `support.yourdomain.com → 187.127.145.228`. In Coolify, set that domain on the app, and it issues a free SSL certificate. Then set `PUBLIC_URL: 'https://support.yourdomain.com'` and `COOKIE_SECURE: true` in `config.js`, and update the embed code on your site.
 
 ## 3. Put the widget on your website
 Add this before `</body>`:
@@ -60,12 +69,13 @@ JavaScript API: `LiveSupport.open()`, `LiveSupport.close()`, `LiveSupport.toggle
 **Important:** In *Settings → Security*, add your website domain(s) to **Allowed website domains**. While that list is empty, any site can load the widget.
 
 ## 4. Deploy (Coolify / VPS)
-- Coolify: create a new resource → Public/Private Git repo → build pack **Nixpacks** (it detects Node automatically). The start command is `npm start` and the port is `4000`.
+- Coolify: create a new resource → Public/Private Git repo → build pack **Nixpacks** (it detects Node automatically). The start command is `npm start` and the port is `3010`.
 - Add a **persistent volume** mounted at `/app/uploads` so attachments survive redeploys.
 - Behind Nginx, enable WebSocket upgrade:
   ```nginx
   location / {
-    proxy_pass http://127.0.0.1:4000;
+    proxy_pass http://127.0.0.1:3010;
+    client_max_body_size 30m;   # photo / voice uploads
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
@@ -90,6 +100,18 @@ live-support-desk/
 │   └── demo.html        ← test page at /demo
 └── uploads/             ← stored attachments (persist this folder)
 ```
+
+## Photos, voice messages & replies (WhatsApp style)
+Customers (widget) and agents (admin panel and Android app) can both:
+- **Send photos.** Pick several at once, paste from the clipboard, or drag and drop. Every image type is accepted (JPG, PNG, GIF, WebP, HEIC, AVIF, BMP, TIFF, SVG…).
+- **Record voice messages.** Press 🎤, then ➤ to send or 🗑 to discard. In the Android app, hold the mic and release to send, or slide left to cancel. Voice notes play inline with a seek bar.
+- **Reply to a specific message.** Hover and click ↩, swipe right on touch screens, or long-press in the app. The reply shows the quoted message, and tapping the quote jumps to the original.
+
+**Image size (like WhatsApp):** photos are shrunk on the phone or in the browser before upload, so uploads are fast on mobile data. The server then makes sure of it: auto-rotate, strip EXIF/GPS, max **1600 px** on the long side, **JPEG 75%**. A typical 4–8 MB camera photo ends up around **150–350 KB**. Chat bubbles load a **~20 KB WebP thumbnail**, and the full image loads only when someone taps it. Animated GIFs are kept as they are. HEIC/AVIF/TIFF/BMP files are converted to JPEG when possible so every browser and phone can show them. Change the numbers in `IMG` in `server.js` if you want.
+
+Voice notes are stored as recorded (Opus/WebM from Chrome/Android browsers, AAC/M4A from Safari and the Android app), at about 4 KB per second. Uploads are limited by `MAX_UPLOAD_MB` (25) in `config.js`. Image processing uses the **sharp** package, which installs prebuilt binaries with `npm install` and needs no compiling. If sharp is missing, images are stored uncompressed.
+
+Internal notes can't be quoted in a customer-visible reply, so private notes never leak through a quote.
 
 ## Roles
 | Role | Can do |
@@ -156,5 +178,3 @@ The `SupportDeskAgent` Android project connects to this server.
 
 ## Scaling note
 This runs as a **single process**, which comfortably handles a single business. To run several instances later, add the `@socket.io/redis-adapter` package and move the in-memory rate limits to Redis.
-#   s i n g l e t e n a n t l i v e c h a t  
- 
