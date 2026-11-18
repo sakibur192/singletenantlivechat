@@ -63,3 +63,15 @@ module.exports = {
     socketsPerIp: 30,          // max concurrent socket connections per IP
   },
 };
+
+// ------------------------------------------------------------
+// Server-only secrets: if a file named config.local.js exists next to this one,
+// its values override the ones above. It is listed in .gitignore, so passwords and
+// APP_SECRET never end up on GitHub. Example config.local.js:
+//   module.exports = { DATABASE_URL: 'postgresql://user:pass@127.0.0.1:5432/livesupport', APP_SECRET: '...' };
+// ------------------------------------------------------------
+try {
+  Object.assign(module.exports, require('./config.local.js'));
+} catch (e) {
+  if (e.code !== 'MODULE_NOT_FOUND' || !String(e.message).includes('config.local')) throw e;
+}

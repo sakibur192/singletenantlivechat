@@ -20,7 +20,16 @@ npm install
 # create an empty database
 psql -U postgres -c "CREATE DATABASE livesupport;"
 ```
-Edit **`config.js`**:
+Edit **`config.js`**, or on a server put the secret values in **`config.local.js`**. That file overrides `config.js` and is git-ignored, so passwords never reach GitHub:
+```js
+// config.local.js  (create on the server only)
+module.exports = {
+  DATABASE_URL: 'postgresql://livechat:YOUR_DB_PASSWORD@127.0.0.1:5432/livesupport',
+  APP_SECRET: 'a-long-random-string',
+  DEFAULT_OWNER: { name: 'Owner', email: 'you@example.com', password: 'a-strong-password' },
+};
+```
+
 
 | Key | What to set |
 |---|---|

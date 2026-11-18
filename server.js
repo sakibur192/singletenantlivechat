@@ -1627,6 +1627,9 @@ function agentSocket(socket) {
 // ------------------------------------------------------------
 (async () => {
   try {
+    if (/change-me/.test(config.APP_SECRET) || String(config.APP_SECRET).length < 32) {
+      console.warn('⚠️  APP_SECRET is the default or too short — set a long random one in config.local.js before going live!');
+    }
     await db.migrate();
     // nobody is connected at boot — reset stale presence
     await q(`UPDATE users SET presence='offline' WHERE presence<>'offline'`);
