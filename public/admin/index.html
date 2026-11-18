@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Support Desk</title>
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <!-- Login -->
+  <div id="login" class="login hidden">
+    <form id="loginForm" class="login-card">
+      <div class="brand-lg"><span class="logo">💬</span> Live Support Desk</div>
+      <p class="muted">Sign in to your support dashboard</p>
+      <label>Email<input name="email" type="email" required autocomplete="username" /></label>
+      <label>Password<input name="password" type="password" required autocomplete="current-password" /></label>
+      <div id="loginError" class="error"></div>
+      <button class="btn primary full" type="submit">Sign in</button>
+    </form>
+  </div>
+
+  <!-- App -->
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="brand"><span class="logo">💬</span><span id="companyName">Support Desk</span></div>
+      <nav id="nav">
+        <a href="#/dashboard" data-page="dashboard"><i>📊</i>Dashboard</a>
+        <a href="#/inbox" data-page="inbox"><i>📥</i>Inbox <b id="navUnread" class="pill hidden">0</b></a>
+        <a href="#/customers" data-page="customers"><i>👥</i>Customers</a>
+        <a href="#/kb" data-page="kb" data-min="supervisor"><i>📚</i>Knowledge Base</a>
+        <a href="#/canned" data-page="canned"><i>⚡</i>Canned Replies</a>
+        <a href="#/agents" data-page="agents"><i>🧑‍💼</i>Agents</a>
+        <a href="#/widget" data-page="widget" data-min="admin"><i>🎨</i>Widget Design</a>
+        <a href="#/analytics" data-page="analytics" data-min="supervisor"><i>📈</i>Analytics</a>
+        <a href="#/settings" data-page="settings" data-min="admin"><i>⚙️</i>Settings</a>
+        <a href="#/audit" data-page="audit" data-min="admin"><i>🛡️</i>Audit Logs</a>
+      </nav>
+      <div class="me">
+        <div class="me-row">
+          <span id="meAvatar" class="avatar">A</span>
+          <div class="me-info"><b id="meName">—</b><small id="meRole">—</small></div>
+        </div>
+        <select id="presence" title="Your availability">
+          <option value="online">🟢 Online</option>
+          <option value="away">🟡 Away</option>
+          <option value="busy">🔴 Busy</option>
+          <option value="offline">⚫ Offline</option>
+        </select>
+        <div class="me-links"><a href="#/profile">My profile</a> · <a href="#" id="logout">Log out</a></div>
+        <div id="conn" class="conn">Connecting…</div>
+      </div>
+    </aside>
+    <main id="main" class="main"></main>
+  </div>
+
+  <div id="modal" class="modal hidden"><div class="modal-card" id="modalCard"></div></div>
+  <div id="toasts" class="toasts"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
