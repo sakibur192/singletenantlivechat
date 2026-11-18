@@ -19,15 +19,17 @@
     en: { search: 'Search for answers…', faq: 'Frequently asked questions', live: 'Start live chat', liveSub: 'Talk to our support team', back: 'Back', helpful: 'Was this helpful?', yes: 'Yes', no: 'No', thanks: 'Thanks for your feedback!',
       related: 'Related questions', more: 'More questions', stillHelp: 'Still need help?', enterId: 'Please enter your {label} to continue.', cont: 'Continue', welcome: 'Welcome to Live Support!',
       type: 'Type a message…', online: 'We are online', offline: 'We are offline', noResult: 'No matching questions', resolved: 'This chat has been resolved.', rate: 'How was your experience?', rated: 'Thank you for rating us!',
-      newChat: 'Start a new chat', typing: 'is typing…', failed: 'Not sent — tap to retry', attach: 'Attach file', sending: 'Sending…', error: 'Something went wrong. Please try again.', name: 'Your name (optional)', history: 'Your conversations', poweredBy: 'Live Support', you: 'You', agent: 'Support', reply: 'Reply', voice: 'Voice message', photo: 'Photo', recording: 'Recording…', noMic: 'Microphone not available (needs HTTPS and permission).' },
+      newChat: 'Start a new chat', typing: 'is typing…', failed: 'Not sent — tap to retry', attach: 'Attach file', sending: 'Sending…', error: 'Something went wrong. Please try again.', name: 'Your name (optional)', history: 'Your conversations', poweredBy: 'Live Support', you: 'You', agent: 'Support', reply: 'Reply', voice: 'Voice message', photo: 'Photo', recording: 'Recording…', noMic: 'Microphone not available (needs HTTPS and permission).',
+      helpTopics: 'Help topics', chooseTopic: 'Choose what you need help with, or type your message below.', solved: 'Solved, thanks', talkAgent: 'Talk to an agent', addPhoto: 'Add photo', skip: 'Skip', cancel: 'Cancel', optional: 'optional', checkDetails: 'Please check your details:', sendReq: 'Send to support', edit: 'Edit', badNumber: 'Please enter a valid amount (numbers only).', badPhone: 'Please enter a valid mobile number (01XXXXXXXXX).', badId: 'That ID does not look right. Please check and type it again.', pickOption: 'Please choose one of the buttons below.', useButtons: 'Please use the buttons below.', required: 'This is required.' },
     bn: { search: 'উত্তর খুঁজুন…', faq: 'সাধারণ প্রশ্নাবলি', live: 'লাইভ চ্যাট শুরু করুন', liveSub: 'আমাদের সাপোর্ট টিমের সাথে কথা বলুন', back: 'পেছনে', helpful: 'এটি কি সাহায্য করেছে?', yes: 'হ্যাঁ', no: 'না', thanks: 'মতামতের জন্য ধন্যবাদ!',
       related: 'সম্পর্কিত প্রশ্ন', more: 'আরও প্রশ্ন', stillHelp: 'আরও সাহায্য লাগবে?', enterId: 'চালিয়ে যেতে আপনার {label} দিন।', cont: 'চালিয়ে যান', welcome: 'লাইভ সাপোর্টে স্বাগতম!',
       type: 'মেসেজ লিখুন…', online: 'আমরা অনলাইনে আছি', offline: 'আমরা এখন অফলাইনে', noResult: 'কোনো প্রশ্ন পাওয়া যায়নি', resolved: 'চ্যাটটি সমাধান করা হয়েছে।', rate: 'আপনার অভিজ্ঞতা কেমন ছিল?', rated: 'রেটিং দেওয়ার জন্য ধন্যবাদ!',
-      newChat: 'নতুন চ্যাট শুরু করুন', typing: 'লিখছেন…', failed: 'পাঠানো যায়নি — আবার চেষ্টা করুন', attach: 'ফাইল যুক্ত করুন', sending: 'পাঠানো হচ্ছে…', error: 'সমস্যা হয়েছে। আবার চেষ্টা করুন।', name: 'আপনার নাম (ঐচ্ছিক)', history: 'আপনার কথোপকথন', poweredBy: 'লাইভ সাপোর্ট', you: 'আপনি', agent: 'সাপোর্ট', reply: 'উত্তর দিন', voice: 'ভয়েস মেসেজ', photo: 'ছবি', recording: 'রেকর্ড হচ্ছে…', noMic: 'মাইক্রোফোন পাওয়া যায়নি (HTTPS ও অনুমতি লাগবে)।' },
+      newChat: 'নতুন চ্যাট শুরু করুন', typing: 'লিখছেন…', failed: 'পাঠানো যায়নি — আবার চেষ্টা করুন', attach: 'ফাইল যুক্ত করুন', sending: 'পাঠানো হচ্ছে…', error: 'সমস্যা হয়েছে। আবার চেষ্টা করুন।', name: 'আপনার নাম (ঐচ্ছিক)', history: 'আপনার কথোপকথন', poweredBy: 'লাইভ সাপোর্ট', you: 'আপনি', agent: 'সাপোর্ট', reply: 'উত্তর দিন', voice: 'ভয়েস মেসেজ', photo: 'ছবি', recording: 'রেকর্ড হচ্ছে…', noMic: 'মাইক্রোফোন পাওয়া যায়নি (HTTPS ও অনুমতি লাগবে)।',
+      helpTopics: 'সাহায্যের বিষয়', chooseTopic: 'কোন বিষয়ে সাহায্য লাগবে বেছে নিন, অথবা নিচে মেসেজ লিখুন।', solved: 'সমাধান হয়েছে, ধন্যবাদ', talkAgent: 'এজেন্টের সাথে কথা বলুন', addPhoto: 'ছবি দিন', skip: 'এড়িয়ে যান', cancel: 'বাতিল', optional: 'ঐচ্ছিক', checkDetails: 'আপনার তথ্যগুলো একবার দেখে নিন:', sendReq: 'সাপোর্টে পাঠান', edit: 'আবার লিখুন', badNumber: 'সঠিক পরিমাণ লিখুন (শুধু সংখ্যা)।', badPhone: 'সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)।', badId: 'আইডিটি সঠিক মনে হচ্ছে না। আবার দেখে লিখুন।', pickOption: 'নিচের বোতাম থেকে একটি বেছে নিন।', useButtons: 'নিচের বোতাম ব্যবহার করুন।', required: 'এটি দিতেই হবে।' },
   };
 
   var cfg = null, t = T.en, root, shadow, panel, launcher, badge;
-  var state = { open: false, screen: 'home', session: null, conv: null, messages: [], socket: null, unread: 0, online: false, faqCache: null, replyTo: null, rated: {} };
+  var state = { open: false, screen: 'chat', session: null, conv: null, messages: [], socket: null, unread: 0, online: false, faqCache: null, replyTo: null, rated: {} };
   var history = [];
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -114,6 +116,14 @@
       '.recb .dot{width:10px;height:10px;border-radius:50%;background:#dc2626;animation:lsblink 1s infinite}@keyframes lsblink{50%{opacity:.2}}' +
       '.lb{position:absolute;inset:0;background:rgba(0,0,0,.88);z-index:5;align-items:center;justify-content:center}.lb img{max-width:96%;max-height:92%;border-radius:6px}.lb .x{position:absolute;top:12px;right:12px}' +
       '.ib.snd svg{width:20px;height:20px}' +
+      '.m.bot{max-width:86%}.m.bot.err{background:#fef2f2;color:#991b1b}.m.bot .tx{white-space:pre-wrap}' +
+      '.chips{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start;max-width:92%;margin:2px 0 4px}' +
+      '.chip-b{border:1.5px solid ' + p + ';color:' + p + ';background:#fff;border-radius:18px;padding:7px 13px;font-size:13.5px;cursor:pointer;text-align:left;line-height:1.3;transition:all .15s}' +
+      '.chip-b:hover{background:' + p + ';color:#fff}.chip-b:disabled{opacity:.55;cursor:default}' +
+      '.chip-b.pri{background:' + p + ';color:#fff}.chip-b.ghost{border-color:#cbd5e1;color:#64748b}.chip-b.ghost:hover{background:#f1f5f9;color:#334155}' +
+      '.sum{margin-top:6px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden}.sum .st{background:#f1f5f9;padding:6px 10px;font-weight:700;font-size:13px}' +
+      '.sum .sr{display:flex;justify-content:space-between;gap:10px;padding:5px 10px;border-top:1px solid #f1f5f9;font-size:13px}.sum .sr span{color:#64748b}.sum .sr b{text-align:right;word-break:break-all}' +
+      '.m .rq{border-left:3px solid #f59e0b;padding-left:8px}.m.c .rq{border-left-color:#fde68a}' +
       '.typ{padding:0 14px 6px;font-size:12px;color:#64748b;font-style:italic;min-height:20px;background:#f8fafc}' +
       '.cmp{border-top:1px solid #e2e8f0;padding:10px;display:flex;gap:8px;align-items:flex-end;background:#fff;flex-shrink:0}' +
       '.cmp textarea{flex:1;border:1px solid #e2e8f0;border-radius:20px;padding:10px 14px;font-size:14px;resize:none;max-height:120px;min-height:42px;outline:none;line-height:1.4}.cmp textarea:focus{border-color:' + p + '}' +
@@ -311,6 +321,245 @@
     });
   }
 
+  // ---------------------------------------------------------- guided help (bot)
+  // The chat opens straight away. Topic buttons start a short step-by-step form; the answers are
+  // sent to the agents as one detailed request. Anything typed outside a form is normal live chat.
+  var bot = { showMenu: true, menuCat: null, flow: null, needId: false, pendingText: null, err: null };
+
+  function loadTopics() {
+    if (state.faqCache) return Promise.resolve(state.faqCache);
+    return api('GET', '/faqs').then(function (r) { state.faqCache = r; drawMessages(); return r; }).catch(function () { return { categories: [] }; });
+  }
+  function topicCats() { return ((state.faqCache && state.faqCache.categories) || []).filter(function (c) { return c.faqs && c.faqs.length; }); }
+
+  function botBubble(html, cls) { return '<div class="m a bot' + (cls ? ' ' + cls : '') + '"><div class="nm">' + esc(state.company || t.agent) + '</div>' + html + '</div>'; }
+  function chips(list) {
+    return '<div class="chips">' + list.map(function (c) {
+      return '<button class="chip-b' + (c.cls ? ' ' + c.cls : '') + '" data-bot="' + esc(c.act) + '"' + (c.arg != null ? ' data-arg="' + esc(c.arg) + '"' : '') + (c.disabled ? ' disabled' : '') + '>' + esc(c.label) + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function botHtml() {
+    var h = '';
+    var f = bot.flow;
+    if (f) {
+      f.log.forEach(function (l) {
+        if (l.from === 'me') h += '<div class="mw c"><div class="m c' + (l.img ? ' media' : '') + '">' + (l.img ? '<img class="ph" src="' + esc(l.img) + '" data-full="' + esc(l.img) + '" alt="">' : '<div class="tx">' + esc(l.text) + '</div>') + '</div></div>';
+        else h += botBubble('<div class="tx">' + linkify(l.text) + '</div>', l.err ? 'err' : '');
+      });
+      if (f.info) {
+        h += chips([{ act: 'solved', label: '✅ ' + t.solved }, { act: 'agent', label: '💬 ' + t.talkAgent }]);
+      } else if (f.i < f.fields.length) {
+        var cur = f.fields[f.i];
+        var list = [];
+        if (cur.type === 'select') (cur.options || []).forEach(function (o) { list.push({ act: 'opt', arg: o, label: o }); });
+        if (cur.type === 'image') list.push({ act: 'photo', label: '📷 ' + t.addPhoto, cls: 'pri' });
+        if (!cur.required && cur.type !== 'player_id') list.push({ act: 'skip', label: t.skip });
+        list.push({ act: 'cancel', label: '✖ ' + t.cancel, cls: 'ghost' });
+        h += chips(list);
+      } else {
+        var rows = f.fields.filter(function (x) { return x.type !== 'image' && x.id !== '__pid' && f.answers[x.id]; })
+          .map(function (x) { return '<div class="sr"><span>' + esc(x.name || String(x.label).replace(/\s*[?？]\s*$/, '')) + '</span><b>' + esc(f.answers[x.id]) + '</b></div>'; }).join('');
+        h += botBubble('<div class="tx"><b>' + esc(t.checkDetails) + '</b></div><div class="sum"><div class="st">📋 ' + esc(f.faq.question) + '</div>' + rows +
+          (f.atts.length ? '<div class="sr"><span>📷</span><b>' + f.atts.length + ' ' + esc(t.photo) + '</b></div>' : '') + '</div>');
+        h += chips([{ act: 'submit', label: f.sending ? t.sending : '✅ ' + t.sendReq, cls: 'pri', disabled: f.sending },
+          { act: 'edit', label: '✏️ ' + t.edit, disabled: f.sending }, { act: 'cancel', label: '✖ ' + t.cancel, cls: 'ghost', disabled: f.sending }]);
+      }
+      return h;
+    }
+    if (bot.needId) {
+      return botBubble('<div class="tx">' + esc(t.enterId.replace('{label}', cfg.player_id_label || 'Player ID')) + '</div>') +
+        chips([{ act: 'cancelid', label: '✖ ' + t.cancel, cls: 'ghost' }]);
+    }
+    if (!state.messages.length || bot.showMenu) {
+      if (!state.messages.length) h += botBubble('<div class="tx">' + linkify(cfg.welcome_message) + '</div>');
+      var cats = topicCats();
+      if (!cats.length) return h;
+      if (cats.length > 1 && !bot.menuCat) {
+        h += botBubble('<div class="tx">' + esc(t.chooseTopic) + '</div>');
+        h += chips(cats.map(function (c) { return { act: 'cat', arg: c.id, label: c.title }; }));
+      } else {
+        var cat = cats.length === 1 ? cats[0] : cats.filter(function (c) { return c.id === bot.menuCat; })[0] || cats[0];
+        h += botBubble('<div class="tx">' + esc(cat.title) + '</div>');
+        var items = cat.faqs.map(function (q) { return { act: 'topic', arg: q.id, label: (q.has_form ? '📋 ' : '💡 ') + q.question }; });
+        if (cats.length > 1) items.push({ act: 'cats', label: '‹ ' + t.back, cls: 'ghost' });
+        h += chips(items);
+      }
+    }
+    return h;
+  }
+
+  function bindBot(box) {
+    Array.prototype.slice.call(box.querySelectorAll('[data-bot]')).forEach(function (b) {
+      b.onclick = function () { onBot(b.dataset.bot, b.dataset.arg); };
+    });
+  }
+  function redrawBot() { drawMessages(); var ta = $('#ls-ta'); if (ta) ta.focus(); }
+
+  function onBot(act, arg) {
+    var f = bot.flow;
+    if (act === 'cat') { bot.menuCat = arg; return redrawBot(); }
+    if (act === 'cats') { bot.menuCat = null; return redrawBot(); }
+    if (act === 'topic') return startTopic(arg);
+    if (act === 'cancelid') { bot.needId = false; bot.pendingText = null; return redrawBot(); }
+    if (!f) return;
+    if (act === 'cancel') { bot.flow = null; bot.showMenu = true; return redrawBot(); }
+    if (act === 'edit') return startTopic(f.faq.id, true);
+    if (act === 'opt') return answerField(arg);
+    if (act === 'skip') { f.log.push({ from: 'me', text: '— ' + t.skip }); f.i++; return advance(); }
+    if (act === 'photo') return pickFlowPhoto();
+    if (act === 'submit') return submitRequest();
+    if (act === 'solved') { f.log.push({ from: 'me', text: t.solved }); bot.flow = null; bot.showMenu = false; return redrawBot(); }
+    if (act === 'agent') { f.info = false; f.log.push({ from: 'me', text: t.talkAgent }); f.notifyOnly = true; return ensureIdThen(function () { submitRequest(); }); }
+  }
+
+  function startTopic(id, restart) {
+    api('POST', '/faq-events', { event_type: 'click', faq_id: id }).catch(function () {});
+    return api('GET', '/faqs/' + id).then(function (faq) {
+      var fields = (faq.fields || []).slice();
+      var hasPid = fields.some(function (x) { return x.type === 'player_id'; });
+      // a request needs to know who is asking: ask the Player ID first if we don't know it yet
+      if (!state.session && !hasPid && cfg.require_player_id) fields.unshift({ id: '__pid', label: t.enterId.replace('{label}', cfg.player_id_label || 'Player ID'), type: 'player_id', required: true });
+      bot.flow = { faq: faq, fields: fields, i: 0, answers: {}, atts: [], log: [{ from: 'me', text: faq.question }], cid: uid(), asked: {} };
+      bot.showMenu = false; bot.needId = false;
+      if (faq.answer) bot.flow.log.push({ from: 'bot', text: faq.answer });
+      if (!faq.fields || !faq.fields.length) {
+        // information topic: show the answer; tell the agents if the admin chose so, or if the customer asks for one
+        if (faq.notify_agent) { bot.flow.notifyOnly = true; return ensureIdThen(function () { submitRequest(); }); }
+        bot.flow.info = true; return redrawBot();
+      }
+      advance();
+    }).catch(function () { bot.flow = null; redrawBot(); });
+  }
+
+  function advance() {
+    var f = bot.flow; if (!f) return;
+    while (f.i < f.fields.length) {
+      var cur = f.fields[f.i];
+      if (cur.type === 'player_id' && state.session && state.session.player_id) { f.answers[cur.id] = state.session.player_id; f.i++; continue; }
+      if (!f.asked[f.i]) { f.asked[f.i] = true; f.log.push({ from: 'bot', text: cur.label + (cur.required || cur.type === 'player_id' ? '' : ' (' + t.optional + ')') }); }
+      break;
+    }
+    redrawBot();
+  }
+
+  function fieldError(cur, v) {
+    if (cur.type === 'number') { var n = Number(String(v).replace(/[,\s৳]/g, '')); if (!(n > 0)) return t.badNumber; }
+    if (cur.type === 'phone') { var p = String(v).replace(/[\s-]/g, '').replace(/^\+?880/, '0'); if (!/^01[3-9]\d{8}$/.test(p)) return t.badPhone; }
+    if (cur.type === 'player_id' && !/^[\w.@\-+:]{1,150}$/.test(v)) return t.badId;
+    if (cur.type === 'select' && (cur.options || []).indexOf(v) < 0) return t.pickOption;
+    return null;
+  }
+
+  // a typed answer (or an option button) for the current step
+  function answerField(v) {
+    var f = bot.flow; if (!f || f.i >= f.fields.length) return;
+    var cur = f.fields[f.i];
+    v = String(v || '').trim();
+    if (cur.type === 'select') {
+      var match = (cur.options || []).filter(function (o) { return o.toLowerCase() === v.toLowerCase(); })[0];
+      if (match) v = match;
+    }
+    if (cur.type === 'image') { f.log.push({ from: 'bot', text: t.useButtons, err: true }); return redrawBot(); }
+    if (!v) { if (cur.required || cur.type === 'player_id') { f.log.push({ from: 'bot', text: t.required, err: true }); return redrawBot(); } }
+    var err = v ? fieldError(cur, v) : null;
+    if (err) { f.log.push({ from: 'me', text: v }); f.log.push({ from: 'bot', text: err, err: true }); return redrawBot(); }
+    f.log.push({ from: 'me', text: v });
+    if (cur.type === 'player_id' && (!state.session || state.session.player_id !== v)) {
+      // first time we learn who this is: start their session, then continue the form
+      return identify({ player_id: v }).then(function () { f.answers[cur.id] = v; f.i++; connect(); advance(); })
+        .catch(function (e) { f.log.push({ from: 'bot', text: e.message || t.error, err: true }); redrawBot(); });
+    }
+    f.answers[cur.id] = v; f.i++; advance();
+  }
+
+  function pickFlowPhoto() {
+    var inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = function () {
+      var file = inp.files && inp.files[0]; if (!file) return;
+      var f = bot.flow; if (!f) return;
+      var preview = URL.createObjectURL(file);
+      f.log.push({ from: 'me', img: preview });
+      f.log.push({ from: 'bot', text: t.sending }); var waitIdx = f.log.length - 1;
+      redrawBot();
+      ensureIdThen(function () {
+        compressImage(file).then(function (c) {
+          return ensureConversation().then(function () {
+            var fd = new FormData(); fd.append('conversation_id', state.conv.id); fd.append('file', c, c.name);
+            return api('POST', '/uploads', fd, true);
+          });
+        }).then(function (att) {
+          f.log.splice(waitIdx, 1); f.atts.push(att.id); f.i++; advance();
+        }).catch(function (e) {
+          f.log.splice(waitIdx, 1); f.log.push({ from: 'bot', text: e.message || t.error, err: true }); redrawBot();
+        });
+      });
+    };
+    inp.click();
+  }
+
+  // make sure we have a customer session (asks the Player ID if needed), then run fn
+  function ensureIdThen(fn) {
+    if (state.session) return fn();
+    if (!cfg.require_player_id) return identify({}).then(fn).catch(function (e) { $('#ls-typ').textContent = e.message || t.error; });
+    bot.needId = true; bot.afterId = fn; redrawBot();
+  }
+
+  function submitRequest() {
+    var f = bot.flow; if (!f || f.sending) return;
+    f.sending = true; f.error = null; redrawBot();
+    var answers = {}; Object.keys(f.answers).forEach(function (k) { if (k !== '__pid') answers[k] = f.answers[k]; });
+    api('POST', '/requests', { faq_id: f.faq.id, answers: answers, attachment_ids: f.atts, conversation_id: state.conv ? state.conv.id : null, client_message_id: f.cid })
+      .then(function (r) {
+        var newConv = !state.conv || state.conv.id !== r.conversation.id;
+        state.conv = r.conversation;
+        if (r.message) upsertMessage(r.message);
+        bot.flow = null; bot.showMenu = false;
+        connect();
+        if (newConv && state.socket) state.socket.emit('customer:conversation:join', { conversation_id: state.conv.id }, function () {});
+        drawMessages();
+        setTimeout(loadHistory, 400); // pick up the automatic confirmation
+      })
+      .catch(function (e) {
+        f.sending = false;
+        if (e.code === 'session_expired') { saveSession(null); }
+        f.log.push({ from: 'bot', text: e.message || t.error, err: true });
+        // a bad answer: go back to that question
+        redrawBot();
+      });
+  }
+
+  // everything typed in the box goes through here
+  function submitComposer() {
+    var ta = $('#ls-ta'); if (!ta) return;
+    var v = ta.value.trim();
+    if (bot.needId) {
+      if (!v) return;
+      if (!/^[\w.@\-+:]{1,150}$/.test(v)) { $('#ls-typ').textContent = t.badId; return; }
+      ta.value = ''; ta.style.height = 'auto';
+      return identify({ player_id: v }).then(function () {
+        bot.needId = false; connect();
+        var fn = bot.afterId; bot.afterId = null;
+        var pending = bot.pendingText; bot.pendingText = null;
+        drawMessages();
+        if (fn) fn(); else if (pending) send({ content: pending });
+      }).catch(function (e) { $('#ls-typ').textContent = e.message || t.error; });
+    }
+    if (bot.flow) {
+      if (bot.flow.info) { bot.flow = null; } // typing after reading an answer = talk to an agent
+      else if (bot.flow.i < bot.flow.fields.length) { if (!v && bot.flow.fields[bot.flow.i].type !== 'image') return; ta.value = ''; ta.style.height = 'auto'; return answerField(v); }
+      else { $('#ls-typ').textContent = t.useButtons; return; }
+    }
+    if (!v) return;
+    if (!state.session) {
+      if (!cfg.require_player_id) { ta.value = ''; return identify({}).then(function () { connect(); send({ content: v }); }); }
+      bot.pendingText = v; bot.needId = true; ta.value = ''; ta.style.height = 'auto'; return redrawBot();
+    }
+    bot.showMenu = false;
+    send();
+  }
+
   // ---------------------------------------------------------- chat
   // WhatsApp-style: photos (many at once, compressed before upload), voice notes, swipe/hover to reply.
   var MIC = '<svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 003-3V6a3 3 0 10-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.9V22h2v-3.1A7 7 0 0019 12h-2z"/></svg>';
@@ -320,11 +569,14 @@
 
   function renderChat() {
     var agent = state.conv && state.conv.agent_name;
-    panel.innerHTML = header(true, cfg.title, agent ? esc(agent) : null) +
+    loadTopics();
+    if (!state.session && !cfg.require_player_id) identify({}, true).then(function () { connect(); });
+    panel.innerHTML = header(false, cfg.title, agent ? esc(agent) : null) +
       (!state.online ? '<div class="bnr">' + esc(cfg.offline_message) + '</div>' : '') +
       '<div class="bd" id="ls-bd"><div class="msgs" id="ls-msgs"></div></div><div class="typ" id="ls-typ"></div>' +
       '<div id="ls-reply"></div>' +
       '<div class="cmp" id="ls-cmp">' +
+      '<button class="ib" id="ls-topics" title="' + t.helpTopics + '">☰</button>' +
       (cfg.enable_attachments ? '<button class="ib" id="ls-att" title="' + t.attach + '">📎</button><input type="file" id="ls-file" style="display:none" multiple accept="image/*,audio/*,.pdf,.txt,.zip,.doc,.docx">' : '') +
       '<textarea id="ls-ta" rows="1" placeholder="' + t.type + '" maxlength="5000"></textarea>' +
       '<button class="ib snd" id="ls-send" aria-label="Send">' + (cfg.enable_attachments ? MIC : ICONS.send) + '</button></div>' +
@@ -336,7 +588,7 @@
     var stop = function () { if (typingOn && state.socket && state.conv) { typingOn = false; state.socket.emit('customer:typing:stop', { conversation_id: state.conv.id }); } };
     var sendBtn = $('#ls-send');
     var refreshBtn = function () {
-      var voice = cfg.enable_attachments && !ta.value.trim();
+      var voice = cfg.enable_attachments && !ta.value.trim() && !!state.session && !bot.flow && !bot.needId;
       sendBtn.innerHTML = voice ? MIC : ICONS.send;
       sendBtn.setAttribute('aria-label', voice ? t.voice : 'Send');
     };
@@ -349,13 +601,19 @@
         clearTimeout(tt); tt = setTimeout(stop, 2500);
       }
     };
-    ta.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); stop(); send(); refreshBtn(); } };
+    ta.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); stop(); submitComposer(); refreshBtn(); } };
     sendBtn.onclick = function () {
       stop();
-      if (cfg.enable_attachments && !ta.value.trim()) startRecording(); else { send(); refreshBtn(); }
+      var voice = cfg.enable_attachments && !ta.value.trim() && !!state.session && !bot.flow && !bot.needId;
+      if (voice) startRecording(); else { submitComposer(); refreshBtn(); }
+    };
+    $('#ls-topics').onclick = function () {
+      if (bot.flow && !bot.flow.info) return; // finish or cancel the current form first
+      bot.flow = null; bot.needId = false; bot.menuCat = null; bot.showMenu = !bot.showMenu || !state.messages.length;
+      redrawBot(); refreshBtn();
     };
     if (cfg.enable_attachments) {
-      $('#ls-att').onclick = function () { $('#ls-file').click(); };
+      $('#ls-att').onclick = function () { ensureIdThen(function () { $('#ls-file').click(); }); };
       $('#ls-file').onchange = function (e) { var files = Array.prototype.slice.call(e.target.files); e.target.value = ''; sendFiles(files); };
       ta.addEventListener('paste', function (e) {
         var items = (e.clipboardData && e.clipboardData.files) ? Array.prototype.slice.call(e.clipboardData.files) : [];
@@ -420,13 +678,14 @@
 
   function drawMessages() {
     var box = $('#ls-msgs'); if (!box) return;
-    var html = state.messages.length ? state.messages.map(msgHtml).join('') : '<div class="m a"><div class="nm">' + esc(state.company || t.agent) + '</div>' + linkify(cfg.welcome_message) + '</div>';
+    var html = state.messages.map(msgHtml).join('');
     var c = state.conv;
     if (c && (c.status === 'resolved' || c.status === 'closed') && cfg.enable_rating && !c.rating && !state.rated[c.id]) {
       html += '<div class="rate" id="ls-rate">' + t.rate + '<div class="stars">' + [1, 2, 3, 4, 5].map(function (n) { return '<span data-r="' + n + '">★</span>'; }).join('') + '</div></div>';
     }
-    box.innerHTML = html;
+    box.innerHTML = html + botHtml();
     bindMessages(box);
+    bindBot(box);
     if (player) { // keep a playing voice note playing across redraws
       var again = Array.prototype.slice.call(box.querySelectorAll('.vn')).filter(function (v) { return v.dataset.src === player.src; })[0];
       if (again) { player.el = again; again.querySelector('.vp').innerHTML = player.audio.paused ? PLAY : PAUSE; } else stopPlayback();
@@ -603,6 +862,7 @@
 
   function sendFiles(files) {
     if (!files.length) return;
+    if (!state.session) return ensureIdThen(function () { sendFiles(files); });
     var ta = $('#ls-ta'); var caption = ta ? ta.value.trim() : '';
     if (caption) { ta.value = ''; ta.style.height = 'auto'; }
     files.slice(0, 10).forEach(function (f, i) { sendMedia(f, 0, i === 0 ? caption : ''); });
@@ -731,7 +991,7 @@
       s.on('connect_error', function (e) {
         if (e.message === 'session_expired') { saveSession(null); disconnect(); if (state.screen === 'chat') go('identify'); }
       });
-      s.on('chat:session:revoked', function () { saveSession(null); disconnect(); state.conv = null; state.messages = []; state.screen = 'home'; render(); });
+      s.on('chat:session:revoked', function () { saveSession(null); disconnect(); state.conv = null; state.messages = []; state.screen = 'chat'; bot.flow = null; bot.showMenu = true; render(); });
       s.on('chat:message:new', function (m) {
         if (!state.conv || m.conversation_id !== state.conv.id) return;
         upsertMessage(m);
@@ -780,7 +1040,7 @@
     identify: function (o) { return identify(o || {}); },
     logout: function () {
       var p = state.session ? api('POST', '/sessions/logout').catch(function () {}) : Promise.resolve();
-      return p.then(function () { saveSession(null); disconnect(); state.conv = null; state.messages = []; state.screen = 'home'; render(); });
+      return p.then(function () { saveSession(null); disconnect(); state.conv = null; state.messages = []; state.screen = 'chat'; bot.flow = null; bot.showMenu = true; render(); });
     },
   };
 

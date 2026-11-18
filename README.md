@@ -122,6 +122,25 @@ Voice notes are stored as recorded (Opus/WebM from Chrome/Android browsers, AAC/
 
 Internal notes can't be quoted in a customer-visible reply, so private notes never leak through a quote.
 
+## Guided help topics (auto questions → detailed request to agents)
+The widget opens **straight into the chat** with topic buttons (no FAQ page or Player ID form first).
+- **Tap a topic** such as *ডিপোজিট করেছি কিন্তু টাকা পাইনি*. The chat asks for each detail one by one, as chat bubbles: Player ID, method (as buttons), amount, TrxID, sender number, and a screenshot (with *Skip* when it's optional). Wrong answers get a correction, for example a bad mobile number or amount.
+- **Review and send.** The customer sees a summary card with **Send / Edit / Cancel**.
+- **The agent gets one detailed request** in the inbox and in the Android app, with a notification. It comes as a highlighted card with copy buttons plus the photo. The chat is titled with the topic, set to the topic's priority (High by default) and tagged.
+- **The customer gets an automatic confirmation**, which you can edit per topic. Then the chat continues as normal live chat with the agent.
+- **Typing anything else is normal live chat.** The Player ID is asked inline only when it's first needed. ☰ in the composer shows the topics again.
+
+Three Bangla topics are added automatically on first start: deposit not received, withdraw not received, and other problem.
+
+**Edit topics** in **Knowledge Base → + Question / Edit → 📋 Details to collect**:
+- Add questions of type Player ID, short text, long text, amount, mobile number, choice buttons, or photo.
+- Mark each one required or optional, and give it a short name for agents.
+- Set the chat priority and the automatic reply.
+
+A question with no details is a normal answer-only FAQ. You can tick *Notify agents* to also alert agents when a customer opens it; otherwise the customer gets **Talk to an agent** and **Solved** buttons.
+
+Tip: set **Widget Design → Language → বাংলা** so buttons such as Skip, Cancel and Send also appear in Bangla.
+
 ## Clear old chats (free disk space)
 On the **Dashboard**, admins and owners have a **🧹 Clear** button with *Keep chats from the last 30 minutes / 1 hour / 6 hours / 12 hours*.
 - It first shows a preview: how many conversations (and how many still open), messages, and photo/voice/file uploads will be deleted, and how much space that frees.

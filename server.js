@@ -152,7 +152,7 @@ function serializeMessage(m, atts = [], includeInternal = true) {
   }
   return {
     id: m.id, conversation_id: m.conversation_id, sender_type: m.sender_type, sender_id: m.sender_id,
-    sender_name: m.sender_name || null, message_type: m.message_type, content: m.content,
+    sender_name: m.sender_name || null, message_type: m.message_type, content: m.content, meta: m.meta || null,
     client_message_id: m.client_message_id, delivered_at: m.delivered_at, read_at: m.read_at, created_at: m.created_at,
     reply_to: replyTo,
     attachments: atts.map(serializeAttachment),
@@ -280,7 +280,7 @@ async function setStatus(convId, status, user = null) {
 }
 
 // Insert a message (idempotent with client_message_id), update conversation, fan out real-time events.
-async function createMessage({ convId, senderType, senderId = null, type = 'text', content = null, clientId = null, attachmentId = null, replyToId = null }) {
+async function createMessage({ convId, senderType, senderId = null, type = 'text', content = null, clientId = null, attachmentId = null, replyToId = null, attachmentIds = [], meta = null }) {
   let duplicate = false;
   // reply/quote must point to a message in the same chat; a public message can never quote an internal note
   let replyTo = null;
@@ -290,27 +290,31 @@ async function createMessage({ convId, senderType, senderId = null, type = 'text
   }
   const msg = await tx(async (c) => {
     let m = (await c.query(`
-      INSERT INTO messages(conversation_id, sender_type, sender_id, message_type, content, client_message_id, reply_to_id)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      INSERT INTO messages(conversation_id, sender_type, sender_id, message_type, content, client_message_id, reply_to_id, meta)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       ON CONFLICT (conversation_id, client_message_id) DO NOTHING RETURNING *`,
-      [convId, senderType, senderId, type, content, clientId, replyTo])).rows[0];
+      [convId, senderType, senderId, type, content, clientId, replyTo, meta])).rows[0];
     if (!m) {
       duplicate = true;
       return (await c.query(`SELECT * FROM messages WHERE conversation_id=$1 AND client_message_id=$2`, [convId, clientId])).rows[0];
     }
     let mime = null;
-    if (attachmentId) {
+    // one message can carry several photos/files (guided requests); each must be this sender's own upload in this chat
+    const attIds = [...new Set([attachmentId, ...(attachmentIds || [])].filter(isUuid))].slice(0, 10);
+    for (const aid of attIds) {
       const upd = await c.query(`UPDATE message_attachments SET message_id=$1 WHERE id=$2 AND conversation_id=$3 AND message_id IS NULL
                                  AND uploaded_by_type=$4::varchar AND uploaded_by_id IS NOT DISTINCT FROM $5::uuid RETURNING mime_type`,
-        [m.id, attachmentId, convId, senderType, senderId]);
+        [m.id, aid, convId, senderType, senderId]);
       if (!upd.rowCount) throw new HttpError(400, 'Invalid attachment');
-      mime = upd.rows[0].mime_type;
-      if (type === 'text') {
+      if (!mime) mime = upd.rows[0].mime_type;
+    }
+    if (mime) {
+      if (type === 'text' && !meta) {
         const nt = mime.startsWith('image/') ? 'image' : mime.startsWith('audio/') ? 'audio' : 'file';
         m = (await c.query(`UPDATE messages SET message_type=$2 WHERE id=$1 RETURNING *`, [m.id, nt])).rows[0];
       }
     }
-    if (type !== 'internal_note') {
+    if (type !== 'internal_note' && senderType !== 'system') { // automatic notices don't replace the chat's preview
       const preview = previewFor(m.message_type, content, mime);
       await c.query(`
         UPDATE conversations SET last_message_at=NOW(), last_message_preview=$2, updated_at=NOW(),
@@ -766,21 +770,58 @@ A.get('/faq/questions', ah(async (req, res) => {
     ORDER BY c.sort_order, f.sort_order, f.created_at`, params);
   res.json({ items });
 }));
+// Guided-request fields a question can ask the customer for.
+const FIELD_TYPES = ['player_id', 'text', 'textarea', 'number', 'phone', 'select', 'image'];
+function cleanFields(raw) {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw)) fail(400, 'fields must be a list');
+  const seen = new Set();
+  return raw.slice(0, 15).map((f, i) => {
+    const label = str(f && f.label, 200, true, `Field ${i + 1} label`);
+    const type = oneOf(f.type || 'text', FIELD_TYPES, `Field ${i + 1} type`);
+    let id = String(f.id || label).toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_|_$/g, '').slice(0, 40) || `field_${i + 1}`;
+    if (type === 'player_id') id = 'player_id';
+    while (seen.has(id)) id = `${id}_${i + 1}`;
+    seen.add(id);
+    const out = { id, label, type, required: f.required !== false };
+    const name = str(f.name, 80);
+    if (name) out.name = name; // short name shown to agents in the summary
+    if (type === 'select') {
+      const opts = (Array.isArray(f.options) ? f.options : String(f.options || '').split(/\n|,/)).map((o) => String(o).trim()).filter(Boolean).slice(0, 20);
+      if (!opts.length) fail(400, `Field "${label}" needs at least one choice`);
+      out.options = opts.map((o) => o.slice(0, 100));
+    }
+    return out;
+  });
+}
+const cleanPriority = (p) => (p === undefined ? undefined : oneOf(p, ['low', 'normal', 'high', 'urgent'], 'priority'));
+
 A.post('/faq/questions', requireRole('supervisor'), ah(async (req, res) => {
   const categoryId = req.body.category_id;
   if (!isUuid(categoryId) || !(await one(`SELECT id FROM faq_categories WHERE id=$1`, [categoryId]))) fail(400, 'Choose a category');
   const max = await one(`SELECT COALESCE(MAX(sort_order),0)+1 AS n FROM faqs WHERE category_id=$1`, [categoryId]);
-  const f = await one(`INSERT INTO faqs(category_id, question, answer, sort_order, is_active) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-    [categoryId, str(req.body.question, 500, true, 'Question'), str(req.body.answer, 10000, true, 'Answer'), max.n, req.body.is_active !== false]);
+  const fields = cleanFields(req.body.fields) || [];
+  const answer = str(req.body.answer, 10000) || '';
+  if (!answer && !fields.length) fail(400, 'Write an answer, or add details to collect');
+  const f = await one(`INSERT INTO faqs(category_id, question, answer, sort_order, is_active, fields, priority, auto_reply, notify_agent)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+    [categoryId, str(req.body.question, 500, true, 'Question'), answer, max.n, req.body.is_active !== false,
+     JSON.stringify(fields), cleanPriority(req.body.priority) || 'high', str(req.body.auto_reply, 2000), !!req.body.notify_agent]);
   await audit(req.user, 'faq.created', { id: f.id, question: f.question }, ip(req));
   res.json(f);
 }));
 A.patch('/faq/questions/:id', requireRole('supervisor'), ah(async (req, res) => {
   if (!isUuid(req.params.id)) fail(404, 'Not found');
   const categoryId = isUuid(req.body.category_id) ? req.body.category_id : null;
+  const fields = cleanFields(req.body.fields);
   const f = await one(`UPDATE faqs SET question=COALESCE($2,question), answer=COALESCE($3,answer), category_id=COALESCE($4,category_id),
-                       is_active=COALESCE($5,is_active), updated_at=NOW() WHERE id=$1 RETURNING *`,
-    [req.params.id, str(req.body.question, 500), str(req.body.answer, 10000), categoryId, typeof req.body.is_active === 'boolean' ? req.body.is_active : null]);
+                       is_active=COALESCE($5,is_active), fields=COALESCE($6,fields), priority=COALESCE($7,priority),
+                       auto_reply=CASE WHEN $8::boolean THEN $9 ELSE auto_reply END, notify_agent=COALESCE($10,notify_agent),
+                       updated_at=NOW() WHERE id=$1 RETURNING *`,
+    [req.params.id, str(req.body.question, 500), req.body.answer !== undefined ? (str(req.body.answer, 10000) || '') : null, categoryId,
+     typeof req.body.is_active === 'boolean' ? req.body.is_active : null,
+     fields === undefined ? null : JSON.stringify(fields), cleanPriority(req.body.priority) || null,
+     req.body.auto_reply !== undefined, str(req.body.auto_reply, 2000), typeof req.body.notify_agent === 'boolean' ? req.body.notify_agent : null]);
   if (!f) fail(404, 'Not found');
   await audit(req.user, 'faq.updated', { id: f.id }, ip(req));
   res.json(f);
@@ -1242,7 +1283,7 @@ P.get('/config', ah(async (req, res) => {
 
 P.get('/faqs', ah(async (req, res) => {
   const cats = await many(`SELECT id, title FROM faq_categories WHERE is_active ORDER BY sort_order, created_at`);
-  const faqs = await many(`SELECT f.id, f.category_id, f.question FROM faqs f JOIN faq_categories c ON c.id=f.category_id
+  const faqs = await many(`SELECT f.id, f.category_id, f.question, (jsonb_array_length(COALESCE(f.fields,'[]'::jsonb)) > 0) AS has_form FROM faqs f JOIN faq_categories c ON c.id=f.category_id
                            WHERE f.is_active AND c.is_active ORDER BY f.sort_order, f.created_at`);
   if (req.query.track !== '0') q(`INSERT INTO faq_analytics(faq_id, event_type) VALUES (NULL, 'view')`).catch(() => {});
   res.json({ categories: cats.map((c) => ({ ...c, faqs: faqs.filter((f) => f.category_id === c.id) })) });
@@ -1256,7 +1297,7 @@ P.get('/faqs/search', ah(async (req, res) => {
 }));
 P.get('/faqs/:id', ah(async (req, res) => {
   if (!isUuid(req.params.id)) fail(404, 'Not found');
-  const f = await one(`SELECT f.id, f.question, f.answer, f.category_id, c.title AS category FROM faqs f JOIN faq_categories c ON c.id=f.category_id
+  const f = await one(`SELECT f.id, f.question, f.answer, f.category_id, c.title AS category, COALESCE(f.fields,'[]'::jsonb) AS fields, f.notify_agent FROM faqs f JOIN faq_categories c ON c.id=f.category_id
                        WHERE f.id=$1 AND f.is_active AND c.is_active`, [req.params.id]);
   if (!f) fail(404, 'Not found');
   let related = await many(`SELECT f.id, f.question FROM faq_related r JOIN faqs f ON f.id=r.related_faq_id WHERE r.faq_id=$1 AND f.is_active`, [f.id]);
@@ -1395,6 +1436,85 @@ async function customerSend(s, convId, { content, clientId, attachmentId, replyT
   if (c.status === 'pending') await setStatus(c.id, 'open');
   return { conversation: customerConvView(await convSummary(c.id)), message: forCustomer(r.message), is_new: false };
 }
+
+// Guided request: the customer picked a topic (e.g. "deposit not received") and answered its questions.
+// Everything is sent to the agents as ONE detailed message (with photos), the chat is tagged and prioritised,
+// agents/app get notified like any customer message, and the customer gets an automatic confirmation.
+const PRIORITY_RANK = { low: 1, normal: 2, high: 3, urgent: 4 };
+P.post('/requests', requireCustomer, ah(async (req, res) => {
+  const s = req.session;
+  if (!rateLimit(`creq:${s.customer_id}`, 10)) fail(429, 'Too many requests. Please wait a minute.');
+  if (!isUuid(req.body.faq_id)) fail(400, 'Choose a topic');
+  const faq = await one(`SELECT f.*, c.title AS category FROM faqs f JOIN faq_categories c ON c.id=f.category_id
+                         WHERE f.id=$1 AND f.is_active AND c.is_active`, [req.body.faq_id]);
+  if (!faq) fail(404, 'This topic is no longer available');
+  const fields = Array.isArray(faq.fields) ? faq.fields : [];
+  const answers = req.body.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
+  const attachmentIds = (Array.isArray(req.body.attachment_ids) ? req.body.attachment_ids : []).filter(isUuid).slice(0, 10);
+
+  const rows = [];
+  for (const f of fields) {
+    if (f.type === 'image') continue; // photos come as attachments
+    let v = answers[f.id];
+    if (f.type === 'player_id' && (v === undefined || v === null || v === '')) v = s.player_id;
+    v = v === undefined || v === null ? '' : String(v).trim().slice(0, f.type === 'textarea' ? 3000 : 300);
+    if (!v) { if (f.required) fail(400, `${f.label} is required`); continue; }
+    if (f.type === 'number') {
+      const n = Number(v.replace(/[,\s৳]/g, ''));
+      if (!(n > 0)) fail(400, `${f.label}: enter a valid number`);
+      v = String(n);
+    }
+    if (f.type === 'phone') {
+      const p = v.replace(/[\s-]/g, '').replace(/^\+?880/, '0');
+      if (!/^01[3-9]\d{8}$/.test(p)) fail(400, `${f.label}: enter a valid mobile number (01XXXXXXXXX)`);
+      v = p;
+    }
+    if (f.type === 'select' && Array.isArray(f.options) && !f.options.includes(v)) fail(400, `${f.label}: choose one of the options`);
+    rows.push({ id: f.id, label: f.name || String(f.label).replace(/\s*[?？]\s*$/, ''), type: f.type, value: v });
+  }
+  const needsPhoto = fields.filter((f) => f.type === 'image' && f.required).length;
+  if (attachmentIds.length < needsPhoto) fail(400, 'Please add the required photo');
+
+  // which chat: the one the widget is in (if still open), else the session's open chat, else a new one
+  let convId = null;
+  if (isUuid(req.body.conversation_id)) {
+    const c = await one(`SELECT c.id, c.status FROM conversations c WHERE c.id=$4 AND ${convAccessSql()}`, [...convAccessParams(s), req.body.conversation_id]);
+    if (c && (c.status === 'open' || c.status === 'pending')) convId = c.id;
+    else if (c && attachmentIds.length) convId = c.id; // photos were uploaded into it
+  }
+  if (!convId) {
+    const c = await one(`SELECT c.id FROM conversations c WHERE ${convAccessSql()} AND c.status IN ('open','pending') ORDER BY c.last_message_at DESC LIMIT 1`, convAccessParams(s));
+    convId = c ? c.id : (await startConversation(s, {})).conversation.id;
+  }
+  const cur = await one(`SELECT status FROM conversations WHERE id=$1`, [convId]);
+  if (cur.status === 'resolved' || cur.status === 'closed') await setStatus(convId, 'open');
+
+  const lines = [`📋 ${faq.question}`, ...rows.map((r) => `• ${r.label}: ${r.value}`)];
+  if (attachmentIds.length) lines.push(`📷 ${attachmentIds.length} ${attachmentIds.length === 1 ? 'photo' : 'photos'} attached`);
+  const meta = { type: 'request', faq_id: faq.id, title: faq.question, category: faq.category, fields: rows, photos: attachmentIds.length };
+  const r = await createMessage({
+    convId, senderType: 'customer', senderId: s.customer_id, content: lines.join('\n'),
+    clientId: str(req.body.client_message_id, 100), attachmentIds, meta,
+  });
+
+  if (!r.duplicate) {
+    // prioritise + label the chat so agents see what it is about at a glance
+    const now = await one(`SELECT priority FROM conversations WHERE id=$1`, [convId]);
+    const pr = PRIORITY_RANK[faq.priority] > PRIORITY_RANK[now.priority] ? faq.priority : now.priority;
+    await q(`UPDATE conversations SET subject=$2, priority=$3, updated_at=NOW() WHERE id=$1`, [convId, faq.question.slice(0, 255), pr]);
+    const tag = await one(`INSERT INTO tags(name, color) VALUES ($1, '#d97706') ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id`, [faq.question.slice(0, 60)]);
+    await q(`INSERT INTO conversation_tags VALUES ($1,$2) ON CONFLICT DO NOTHING`, [convId, tag.id]);
+    await logEvent(convId, null, 'request_submitted', { faq_id: faq.id, title: faq.question });
+    q(`INSERT INTO faq_analytics(faq_id, event_type) VALUES ($1, 'live_chat_click')`, [faq.id]).catch(() => {});
+    const conv = await convSummary(convId);
+    io.to(inboxTargets(conv)).emit('inbox:conversation:updated', conv);
+    await createMessage({
+      convId, senderType: 'system', type: 'system',
+      content: faq.auto_reply || '✅ We received your request. An agent will reply here shortly.',
+    });
+  }
+  res.json({ conversation: customerConvView(await convSummary(convId)), message: forCustomer(r.message) });
+}));
 
 P.post('/conversations', requireCustomer, ah(async (req, res) => {
   const content = str(req.body.content, 5000);

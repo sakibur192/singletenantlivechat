@@ -509,6 +509,8 @@
   const replyPreview = (r) => r ? { id: r.id, sender_type: r.sender_type, sender_name: r.sender_name, content: quoteText(r) } : null;
 
   function onMsgClick(e) {
+    const cp = e.target.closest('[data-copy]');
+    if (cp) { navigator.clipboard.writeText(cp.dataset.copy).then(() => toast('Copied: ' + cp.dataset.copy)).catch(() => {}); return; }
     const rb = e.target.closest('[data-reply]');
     if (rb) { setReply(rb.dataset.reply); return; }
     const img = e.target.closest('img[data-full]');
@@ -748,8 +750,16 @@
     const canReply = m.id && !String(m.id).startsWith('tmp-');
     return `<div class="msg ${cls}${media ? ' media' : ''}${m.failed ? ' failed' : ''}" data-id="${m.id}" data-cid="${esc(m.client_message_id || '')}" title="${m.failed ? 'Click to retry' : ''}">` +
       `${canReply ? `<button class="reply-btn" data-reply="${m.id}" title="Reply">↩</button>` : ''}` +
-      `${who ? `<div class="who">${who}</div>` : ''}${q}${atts}${m.content ? `<div class="mtext">${esc(m.content)}</div>` : ''}` +
+      `${who ? `<div class="who">${who}</div>` : ''}${q}${m.meta && m.meta.type === 'request' ? requestCard(m.meta) : ''}${atts}` +
+      `${m.content && !(m.meta && m.meta.type === 'request') ? `<div class="mtext">${esc(m.content)}</div>` : ''}` +
       `<div class="mt">${m.failed ? '<span style="color:var(--danger)">Not sent — click to retry</span>' : ''} ${new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ${tick}</div></div>`;
+  }
+  // guided request from the widget (topic + the customer's answers)
+  function requestCard(meta) {
+    const rows = (meta.fields || []).map((f) => `<div class="rq-row"><span>${esc(f.label)}</span><b>${esc(f.value)}</b>
+      <button class="rq-copy" data-copy="${esc(f.value)}" title="Copy">⧉</button></div>`).join('');
+    return `<div class="rq-card"><div class="rq-head">📋 ${esc(meta.title || 'Request')}${meta.category ? `<small>${esc(meta.category)}</small>` : ''}</div>${rows}
+      ${meta.photos ? `<div class="rq-row"><span>📷 Photos</span><b>${meta.photos}</b></div>` : ''}</div>`;
   }
   function renderMessages() {
     const box = $('#msgs'); if (!box) return;
@@ -899,7 +909,9 @@
       $('#kbFaqs').innerHTML = `<div class="card"><div class="row" style="margin-bottom:12px"><h2 style="margin:0">${esc(cat.title)}</h2><span class="spacer"></span>
         <button class="btn sm" id="catEdit">Rename</button><button class="btn sm" id="catToggle">${cat.is_active ? 'Hide' : 'Show'}</button><button class="btn sm danger" id="catDel">Delete</button></div>
         <div id="faqList">${faqs.map((f) => `<div class="faq-item" draggable="true" data-id="${f.id}"><div class="row"><span class="drag">⠿</span><div class="q">${esc(f.question)}</div><span class="spacer"></span>
-          ${f.is_active ? '' : '<span class="badge">hidden</span>'}<small class="muted">👁 ${f.views} · 👍 ${f.helpful} · 👎 ${f.not_helpful}</small><button class="btn sm" data-edit="${f.id}">Edit</button></div><div class="a">${esc(f.answer)}</div></div>`).join('') || '<p class="muted">No questions in this category</p>'}</div></div>`;
+          ${f.is_active ? '' : '<span class="badge">hidden</span>'}<small class="muted">👁 ${f.views} · 👍 ${f.helpful} · 👎 ${f.not_helpful}</small><button class="btn sm" data-edit="${f.id}">Edit</button></div>
+          ${(f.fields || []).length ? `<div class="kb-fields">📋 Asks for: ${(f.fields || []).map((x) => esc(x.name || x.label)).join(' · ')} <span class="badge ${f.priority || 'high'}">${esc(f.priority || 'high')}</span></div>` : (f.notify_agent ? '<div class="kb-fields">🔔 Notifies agents when opened</div>' : '')}
+          <div class="a">${esc(f.answer)}</div></div>`).join('') || '<p class="muted">No questions in this category</p>'}</div></div>`;
       $('#catEdit').onclick = () => promptBox('Rename category', cat.title, async (v) => { await api('PATCH', '/faq/categories/' + cat.id, { title: v }); cat.title = v; renderCats(); loadFaqs(); });
       $('#catToggle').onclick = async () => { await tryDo(() => api('PATCH', '/faq/categories/' + cat.id, { is_active: !cat.is_active })); cat.is_active = !cat.is_active; renderCats(); loadFaqs(); };
       $('#catDel').onclick = async () => { if (!(await confirmBox(`Delete "${cat.title}" and all its questions?`))) return; await tryDo(() => api('DELETE', '/faq/categories/' + cat.id)); cats = cats.filter((c) => c.id !== cat.id); sel = cats[0] ? cats[0].id : null; renderCats(); loadFaqs(); };
@@ -912,15 +924,64 @@
       modal(`<h2>${f ? 'Edit question' : 'New question'}</h2><form id="ff">
         <label>Category<select name="category_id">${cats.map((c) => `<option value="${c.id}" ${(f ? f.category_id : sel) === c.id ? 'selected' : ''}>${esc(c.title)}</option>`).join('')}</select></label>
         <label>Question<input name="question" required maxlength="500" value="${esc(f ? f.question : '')}"></label>
-        <label>Answer<textarea name="answer" rows="6" required>${esc(f ? f.answer : '')}</textarea></label>
+        <label>Answer / first message <small class="muted">(shown to the customer when they choose this question; optional if you collect details)</small>
+          <textarea name="answer" rows="4">${esc(f ? f.answer : '')}</textarea></label>
+        <div class="card fb-box">
+          <div class="row"><h3 style="margin:0">📋 Details to collect</h3><span class="spacer"></span><button type="button" class="btn sm" id="fbAdd">+ Add question</button></div>
+          <p class="muted" style="margin:4px 0 10px;font-size:12.5px">The customer is asked these one by one in the chat. When they send, an agent gets everything in one message with a notification.
+            Leave empty for a normal answer-only question.</p>
+          <div id="fbRows"></div>
+          <div class="grid g2" style="margin-top:10px">
+            <label>Chat priority<select name="priority">${['urgent', 'high', 'normal', 'low'].map((p) => `<option ${(f ? f.priority || 'high' : 'high') === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+            <label class="check" style="margin-top:22px"><input type="checkbox" name="notify_agent" ${f && f.notify_agent ? 'checked' : ''}> Notify agents even with no details</label>
+          </div>
+          <label>Automatic reply after sending <small class="muted">(optional)</small><textarea name="auto_reply" rows="2" placeholder="✅ We received your request. An agent will reply here shortly.">${esc(f ? f.auto_reply || '' : '')}</textarea></label>
+        </div>
         <label class="check"><input type="checkbox" name="is_active" ${!f || f.is_active ? 'checked' : ''}> Visible in widget</label>
         <label>Related questions <small class="muted">(Ctrl/Cmd-click to select several)</small><select name="related" multiple size="6">${all.map((x) => `<option value="${x.id}" ${rel.includes(x.id) ? 'selected' : ''}>${esc(x.category_title)} — ${esc(x.question)}</option>`).join('')}</select></label>
         <div class="modal-actions">${f ? '<button type="button" class="btn danger" id="fDel">Delete</button><span class="spacer"></span>' : ''}<button type="button" class="btn" data-x>Cancel</button><button class="btn primary">Save</button></div></form>`, (m) => {
         $('[data-x]', m).onclick = closeModal;
+        $('#modalCard').style.width = '720px';
+        // ---- field builder
+        const TYPES = [['player_id', 'Player ID'], ['text', 'Short text'], ['textarea', 'Long text'], ['number', 'Amount / number'], ['phone', 'Mobile number'], ['select', 'Choice buttons'], ['image', 'Photo / screenshot']];
+        let rows = (f && Array.isArray(f.fields) ? f.fields : []).map((x) => ({ ...x }));
+        const drawRows = () => {
+          $('#fbRows').innerHTML = rows.length ? rows.map((r, i) => `<div class="fb-row" data-i="${i}">
+            <div class="fb-num">${i + 1}</div>
+            <div class="fb-main">
+              <input data-k="label" placeholder="Question asked to the customer" value="${esc(r.label || '')}">
+              <div class="row" style="margin-top:6px">
+                <select data-k="type">${TYPES.map(([v, l]) => `<option value="${v}" ${r.type === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+                <input data-k="name" placeholder="Short name for agents (e.g. TrxID)" value="${esc(r.name || '')}">
+                <label class="check" style="margin:0;white-space:nowrap"><input type="checkbox" data-k="required" ${r.required !== false ? 'checked' : ''}> Required</label>
+              </div>
+              ${r.type === 'select' ? `<textarea data-k="options" rows="2" placeholder="One choice per line, e.g. bKash" style="margin-top:6px;min-height:50px">${esc((r.options || []).join('\n'))}</textarea>` : ''}
+            </div>
+            <div class="fb-actions"><button type="button" class="btn sm" data-mv="-1" title="Move up">↑</button><button type="button" class="btn sm" data-mv="1" title="Move down">↓</button><button type="button" class="btn sm danger" data-rm title="Remove">✕</button></div>
+          </div>`).join('') : '<p class="muted" style="margin:0">No details collected — this is an answer-only question.</p>';
+          $$('#fbRows .fb-row').forEach((el) => {
+            const i = +el.dataset.i;
+            $$('[data-k]', el).forEach((inp) => {
+              inp.oninput = inp.onchange = () => {
+                const k = inp.dataset.k;
+                rows[i][k] = k === 'required' ? inp.checked : k === 'options' ? inp.value.split('\n').map((o) => o.trim()).filter(Boolean) : inp.value;
+                if (k === 'type') drawRows();
+              };
+            });
+            $('[data-rm]', el).onclick = () => { rows.splice(i, 1); drawRows(); };
+            $$('[data-mv]', el).forEach((b) => b.onclick = () => { const j = i + +b.dataset.mv; if (j < 0 || j >= rows.length) return; [rows[i], rows[j]] = [rows[j], rows[i]]; drawRows(); });
+          });
+        };
+        $('#fbAdd').onclick = () => { rows.push({ label: '', type: rows.some((r) => r.type === 'player_id') ? 'text' : 'player_id', required: true }); drawRows(); };
+        drawRows();
         $('#fDel') && ($('#fDel').onclick = async () => { if (await tryDo(() => api('DELETE', '/faq/questions/' + f.id))) { closeModal(); refresh(); } });
         $('#ff').onsubmit = async (e) => {
           e.preventDefault(); const fm = e.target;
-          const body = { category_id: fm.category_id.value, question: fm.question.value, answer: fm.answer.value, is_active: fm.is_active.checked };
+          if (rows.some((r) => !String(r.label || '').trim())) return toast('Every detail needs a question text', true);
+          if (!fm.answer.value.trim() && !rows.length) return toast('Write an answer, or add details to collect', true);
+          const body = { category_id: fm.category_id.value, question: fm.question.value, answer: fm.answer.value, is_active: fm.is_active.checked,
+            fields: rows.map((r) => ({ id: r.id, label: r.label, name: r.name, type: r.type || 'text', required: r.required !== false, options: r.options })),
+            priority: fm.priority.value, notify_agent: fm.notify_agent.checked, auto_reply: fm.auto_reply.value };
           const saved = await tryDo(() => f ? api('PATCH', '/faq/questions/' + f.id, body) : api('POST', '/faq/questions', body));
           if (!saved) return;
           await tryDo(() => api('PUT', `/faq/questions/${saved.id}/related`, { ids: [...fm.related.selectedOptions].map((o) => o.value) }));

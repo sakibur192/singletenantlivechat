@@ -111,6 +111,12 @@ CREATE TABLE IF NOT EXISTS faqs (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- guided requests: a question can ask the customer for details, then send them to the agents
+ALTER TABLE faqs ADD COLUMN IF NOT EXISTS fields JSONB DEFAULT '[]';
+ALTER TABLE faqs ADD COLUMN IF NOT EXISTS priority VARCHAR(10) DEFAULT 'high';
+ALTER TABLE faqs ADD COLUMN IF NOT EXISTS auto_reply TEXT;
+ALTER TABLE faqs ADD COLUMN IF NOT EXISTS notify_agent BOOLEAN DEFAULT FALSE;
+
 CREATE TABLE IF NOT EXISTS faq_related (
   faq_id UUID NOT NULL REFERENCES faqs(id) ON DELETE CASCADE,
   related_faq_id UUID NOT NULL REFERENCES faqs(id) ON DELETE CASCADE,
@@ -189,6 +195,8 @@ CREATE TABLE IF NOT EXISTS messages (
 
 -- reply / quote (WhatsApp style)
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id UUID REFERENCES messages(id) ON DELETE SET NULL;
+-- structured details of a guided request (topic + answers)
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS meta JSONB;
 
 CREATE TABLE IF NOT EXISTS message_attachments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -322,6 +330,62 @@ async function migrate() {
       ($2, 'My deposit is not showing', 'Please wait 5 minutes and refresh. If it still does not show, start a live chat and share your transaction ID.', 2)`,
       [cat.id, cat2.id]);
   }
+  await seedGuidedTopics();
+}
+
+// Ready-made guided topics (added once, only if they were never added before).
+async function seedGuidedTopics() {
+  const done = await one(`SELECT 1 FROM settings WHERE key='seed_guided_topics_v1'`);
+  if (done) return;
+  const cat = await one(`INSERT INTO faq_categories(title, sort_order) VALUES ('ডিপোজিট ও উইথড্র সমস্যা', 0) RETURNING id`);
+  const methods = ['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank', 'অন্যান্য'];
+  const topics = [
+    {
+      q: 'ডিপোজিট করেছি কিন্তু টাকা পাইনি',
+      a: 'চিন্তা করবেন না, আমরা দ্রুত চেক করে দিচ্ছি। নিচের তথ্যগুলো দিন।',
+      priority: 'high',
+      reply: '✅ আপনার ডিপোজিট সমস্যার তথ্য আমরা পেয়েছি। একজন এজেন্ট খুব দ্রুত চেক করে আপনাকে এখানেই জানাবে।',
+      fields: [
+        { id: 'player_id', label: 'Player ID', type: 'player_id', required: true },
+        { id: 'method', label: 'কোন মাধ্যমে টাকা পাঠিয়েছেন?', name: 'মাধ্যম', type: 'select', options: methods, required: true },
+        { id: 'amount', label: 'কত টাকা পাঠিয়েছেন?', name: 'টাকার পরিমাণ', type: 'number', required: true },
+        { id: 'trx_id', label: 'Transaction ID (TrxID)', name: 'TrxID', type: 'text', required: true },
+        { id: 'sender', label: 'যে নম্বর থেকে টাকা পাঠিয়েছেন', name: 'প্রেরকের নম্বর', type: 'phone', required: true },
+        { id: 'screenshot', label: 'পেমেন্টের স্ক্রিনশট দিন', name: 'স্ক্রিনশট', type: 'image', required: false },
+      ],
+    },
+    {
+      q: 'উইথড্র দিয়েছি কিন্তু টাকা পাইনি',
+      a: 'আপনার উইথড্র চেক করতে নিচের তথ্যগুলো দিন।',
+      priority: 'high',
+      reply: '✅ আপনার উইথড্র সমস্যার তথ্য আমরা পেয়েছি। একজন এজেন্ট চেক করে আপনাকে এখানেই জানাবে।',
+      fields: [
+        { id: 'player_id', label: 'Player ID', type: 'player_id', required: true },
+        { id: 'method', label: 'কোন মাধ্যমে উইথড্র দিয়েছেন?', name: 'মাধ্যম', type: 'select', options: methods, required: true },
+        { id: 'amount', label: 'কত টাকা উইথড্র দিয়েছেন?', name: 'টাকার পরিমাণ', type: 'number', required: true },
+        { id: 'receive_number', label: 'যে নম্বরে টাকা নেবেন', name: 'গ্রহণের নম্বর', type: 'phone', required: true },
+        { id: 'w_code', label: 'W-Code (যদি থাকে)', name: 'W-Code', type: 'text', required: false },
+        { id: 'screenshot', label: 'স্ক্রিনশট দিন (যদি থাকে)', type: 'image', required: false },
+      ],
+    },
+    {
+      q: 'অন্য কোনো সমস্যা',
+      a: 'আপনার সমস্যাটি জানান, আমরা সাহায্য করব।',
+      priority: 'normal',
+      reply: '✅ আপনার বার্তা আমরা পেয়েছি। একজন এজেন্ট শীঘ্রই উত্তর দেবে।',
+      fields: [
+        { id: 'player_id', label: 'Player ID', type: 'player_id', required: true },
+        { id: 'details', label: 'আপনার সমস্যাটি লিখুন', name: 'সমস্যা', type: 'textarea', required: true },
+        { id: 'screenshot', label: 'স্ক্রিনশট দিন (যদি থাকে)', type: 'image', required: false },
+      ],
+    },
+  ];
+  let i = 1;
+  for (const t of topics) {
+    await q(`INSERT INTO faqs(category_id, question, answer, sort_order, fields, priority, auto_reply, notify_agent)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE)`, [cat.id, t.q, t.a, i++, JSON.stringify(t.fields), t.priority, t.reply]);
+  }
+  await q(`INSERT INTO settings(key, value) VALUES ('seed_guided_topics_v1', '{"done":true}') ON CONFLICT (key) DO NOTHING`);
 }
 
 async function getSetting(key) {
