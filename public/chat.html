@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Customer Support</title>
+  <link rel="icon" href="/brand/support-logo-64.png" />
+  <style>html,body{margin:0;height:100%;background:#f8fafc}</style>
+</head>
+<body>
+  <!--
+    Full-screen support chat. Used by the Android app's Support tab (WebView) and direct links.
+    Optional URL parameters: ?player_id=123&name=Rahim&email=a@b.c&hash=HMAC&lang=bn
+  -->
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search);
+      var s = document.createElement('script');
+      s.src = '/widget.js';
+      s.async = true;
+      s.setAttribute('data-fullscreen', 'true');
+      [['player_id', 'data-player-id'], ['hash', 'data-player-hash'], ['name', 'data-name'], ['email', 'data-email']].forEach(function (p) {
+        var v = q.get(p[0]);
+        if (v) s.setAttribute(p[1], v);
+      });
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

@@ -122,6 +122,15 @@ Voice notes are stored as recorded (Opus/WebM from Chrome/Android browsers, AAC/
 
 Internal notes can't be quoted in a customer-visible reply, so private notes never leak through a quote.
 
+## Clear old chats (free disk space)
+On the **Dashboard**, admins and owners have a **🧹 Clear** button with *Keep chats from the last 30 minutes / 1 hour / 6 hours / 12 hours*.
+- It first shows a preview: how many conversations (and how many still open), messages, and photo/voice/file uploads will be deleted, and how much space that frees.
+- After you confirm, everything **older than the chosen window** (counted from the moment you click) is permanently deleted: the messages, the conversations whose last activity is older, and their photos, thumbnails, voice notes and files on disk. It also sweeps up leftover files from uploads that were never sent.
+- A chat that is still active keeps its recent messages; only its older ones go.
+- **Kept:** agents, settings, FAQ, canned replies, tags and customer profiles.
+- If a customer whose chat was cleared writes again, they simply continue in a new chat.
+- Every clear is written to the **Audit Logs**, and open admin screens refresh themselves.
+
 ## Roles
 | Role | Can do |
 |---|---|

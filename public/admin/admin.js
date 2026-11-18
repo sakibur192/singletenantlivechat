@@ -172,6 +172,11 @@
     };
     s.on('inbox:message:read', (p) => markTicks(p, 'read'));
     s.on('inbox:message:delivered', (p) => markTicks(p, 'delivered'));
+    s.on('inbox:cleared', ({ by }) => {
+      if (S.inbox && S.inbox.openId) { S.inbox.openId = null; }
+      toast(`Old chats were cleared${by ? ' by ' + by : ''}`);
+      if (S.page === 'inbox' || S.page === 'dashboard' || S.page === 'customers') route();
+    });
     s.on('inbox:agent:presence', ({ agent_id, presence }) => {
       const a = S.agents.find((x) => x.id === agent_id);
       if (a) a.presence = presence;
@@ -220,7 +225,16 @@
     const d = await api('GET', '/dashboard');
     const k = (label, value, sub) => `<div class="kpi"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;
     $('#main').innerHTML = `<div class="page">
-      <div class="page-head"><h1>Dashboard</h1><span class="badge ${d.support_online ? 'online' : ''}">${d.support_online ? 'Support is online' : 'Support is offline'}</span></div>
+      <div class="page-head"><h1>Dashboard</h1>
+        <div class="row">
+          <span class="badge ${d.support_online ? 'online' : ''}">${d.support_online ? 'Support is online' : 'Support is offline'}</span>
+          ${can('admin') ? `<div class="clear-wrap"><button class="btn danger" id="clearBtn">🧹 Clear</button>
+            <div class="clear-menu hidden" id="clearMenu">
+              <div class="muted" style="padding:6px 12px 4px;font-size:12px">Keep chats from the last…</div>
+              <button data-keep="30m">30 minutes</button><button data-keep="1h">1 hour</button>
+              <button data-keep="6h">6 hours</button><button data-keep="12h">12 hours</button>
+            </div></div>` : ''}
+        </div></div>
       <div class="grid g4">
         ${k('Open Chats', d.open, 'Active conversations')}
         ${k('Waiting', d.waiting, 'Need assignment')}
@@ -238,6 +252,39 @@
           <li>Paste the embed code from <a href="#/settings">Settings</a> into your website, and add your domain to the allow-list.</li>
           <li>Invite your team in <a href="#/agents">Agents</a> — set yourself <b>Online</b> to receive chats.</li>
         </ol></div></div>`;
+    if (can('admin')) {
+      const menu = $('#clearMenu');
+      $('#clearBtn').onclick = (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); };
+      document.addEventListener('click', () => menu.classList.add('hidden'), { once: true });
+      $$('[data-keep]', menu).forEach((b) => b.onclick = () => { menu.classList.add('hidden'); clearChats(b.dataset.keep, b.textContent); });
+    }
+  }
+
+  // ---- Clear old chats (keeps the chosen window, deletes everything older) ----
+  async function clearChats(keep, label) {
+    const p = await tryDo(() => api('GET', '/cleanup/preview?keep=' + keep));
+    if (!p) return;
+    const when = new Date(p.cutoff).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    const nothing = !p.conversations && !p.messages && !p.files;
+    modal(`<h2>🧹 Clear chats older than ${esc(label)}</h2>
+      <p>Everything from <b>${esc(when)}</b> until now is kept. Everything <b>before</b> that is permanently deleted:</p>
+      <div class="card" style="margin:0 0 12px">
+        <div class="kv"><span>Conversations</span><span><b>${p.conversations}</b>${p.open_conversations ? ` <span class="badge urgent">${p.open_conversations} still open</span>` : ''}</span></div>
+        <div class="kv"><span>Messages</span><span><b>${p.messages}</b></span></div>
+        <div class="kv"><span>Photos, voice notes & files</span><span><b>${p.files}</b> (${p.bytes ? fmtSize(p.bytes) : "0 KB"})</span></div>
+      </div>
+      <p class="muted" style="font-size:13px">Agents, settings, FAQ, canned replies and customer profiles are kept. This cannot be undone.</p>
+      <div class="modal-actions"><button class="btn" data-x>Cancel</button>
+        <button class="btn primary" id="doClear" style="background:var(--danger);border-color:var(--danger)" ${nothing ? 'disabled' : ''}>${nothing ? 'Nothing to delete' : 'Delete permanently'}</button></div>`, (m) => {
+      $('[data-x]', m).onclick = closeModal;
+      const go = $('#doClear');
+      go.onclick = async () => {
+        go.disabled = true; go.textContent = 'Deleting…';
+        const r = await tryDo(() => api('POST', '/cleanup', { keep }));
+        closeModal();
+        if (r) { toast(`Cleared ${r.conversations} chats, ${r.messages} messages, ${r.files} files — ${r.bytes_freed ? fmtSize(r.bytes_freed) : "0 KB"} freed`); route(); }
+      };
+    });
   }
 
   // ============================================================

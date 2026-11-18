@@ -9,6 +9,10 @@
   var script = document.currentScript || (function () { var s = document.querySelectorAll('script[src*="widget.js"]'); return s[s.length - 1]; })();
   var BASE = new URL(script.src, location.href).origin;
   var DATA = script.dataset || {};
+  // data-fullscreen="true": chat fills the whole page (used by /chat and in-app WebViews)
+  // data-launcher-image="URL": use your own round logo as the chat bubble
+  var FULL = DATA.fullscreen === 'true';
+  var LAUNCH_IMG = DATA.launcherImage || '';
   var LS_KEY = 'lsd_session_' + BASE;
 
   var T = {
@@ -61,6 +65,9 @@
       '.ls-panel{position:fixed;bottom:92px;' + side + ':20px;width:' + w + 'px;height:' + h + 'px;max-height:calc(100vh - 110px);background:#fff;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;z-index:2147483647;opacity:0;transform:translateY(16px) scale(.98);pointer-events:none;transition:all .2s;color:#0f172a;font-size:14px;line-height:1.45}' +
       '.ls-panel.open{opacity:1;transform:none;pointer-events:auto}' +
       '.no-launcher .ls-panel{bottom:20px;max-height:calc(100vh - 40px)}' +
+      '.ls-launch.img{background:transparent;padding:0;overflow:visible}.ls-launch.img img{width:64px;height:64px;border-radius:50%;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35))}' +
+      '.ls-launch.img{width:64px;height:64px}' +
+      (FULL ? '.ls-panel,.ls-panel.open{top:0;left:0;right:0;bottom:0;width:100%;height:100%;max-height:100%;border-radius:0;box-shadow:none;transform:none;opacity:1;pointer-events:auto}[data-close]{display:none!important}' : '') +
       '@media(max-width:480px){.ls-panel{width:100vw;height:100%;max-height:100%;bottom:0;' + side + ':0;border-radius:0}}' +
       '.hd{background:linear-gradient(135deg,' + p + ',' + s2 + ');color:#fff;padding:16px 16px 18px;flex-shrink:0}' +
       '.hd-row{display:flex;align-items:center;gap:10px}.hd h2{margin:0;font-size:17px;font-weight:700}.hd p{margin:2px 0 0;font-size:12.5px;opacity:.9}' +
@@ -140,10 +147,11 @@
       var wrap = document.createElement('div'); if (!cfg.show_launcher) wrap.className = 'no-launcher'; shadow.appendChild(wrap);
       launcher = document.createElement('button');
       launcher.className = 'ls-launch'; launcher.setAttribute('aria-label', 'Open support chat');
-      launcher.innerHTML = ICONS[cfg.launcher_icon] || ICONS.chat;
+      setLauncher(false);
       badge = document.createElement('span'); badge.className = 'ls-badge'; badge.style.display = 'none'; launcher.appendChild(badge);
       launcher.onclick = toggle;
-      if (cfg.show_launcher) wrap.appendChild(launcher);
+      if (cfg.show_launcher && !FULL) wrap.appendChild(launcher);
+      if (FULL) wrap.className = 'no-launcher';
       panel = document.createElement('div'); panel.className = 'ls-panel'; panel.setAttribute('role', 'dialog');
       wrap.appendChild(panel);
 
@@ -153,7 +161,7 @@
       }
       if (state.session) checkSession();
       render();
-      if (DATA.open === 'true' || /[?&]preview=1/.test(location.search)) open();
+      if (FULL || DATA.open === 'true' || /[?&]preview=1/.test(location.search)) open();
       window.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.open) close(); });
     }).catch(function (e) { console.warn('[LiveSupport] widget disabled:', e.message); });
   }
@@ -166,15 +174,22 @@
   }
 
   function toggle() { state.open ? close() : open(); }
+  function setLauncher(isOpen) {
+    var img = LAUNCH_IMG && /^(https?:)?\/\/|^\//.test(LAUNCH_IMG);
+    launcher.classList.toggle('img', !!img && !isOpen);
+    launcher.innerHTML = isOpen ? ICONS.close : (img ? '<img alt="Support" src="' + esc(LAUNCH_IMG) + '">' : (ICONS[cfg.launcher_icon] || ICONS.chat));
+    if (badge) launcher.appendChild(badge);
+  }
   function open() {
     state.open = true; panel.classList.add('open');
-    launcher.innerHTML = ICONS.close; launcher.appendChild(badge);
+    setLauncher(true);
     state.unread = 0; updateBadge();
     if (state.screen === 'chat') { scrollBottom(); markRead(); var ta = $('textarea'); ta && ta.focus(); }
   }
   function close() {
+    if (FULL) return;
     state.open = false; panel.classList.remove('open');
-    launcher.innerHTML = ICONS[cfg.launcher_icon] || ICONS.chat; launcher.appendChild(badge);
+    setLauncher(false);
   }
   function updateBadge() { badge.textContent = state.unread; badge.style.display = state.unread && !state.open ? '' : 'none'; }
   function go(screen, arg) { if (state.screen !== screen) history.push([state.screen, state.arg]); state.screen = screen; state.arg = arg; render(); }

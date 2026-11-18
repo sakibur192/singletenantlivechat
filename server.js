@@ -1010,6 +1010,84 @@ A.get('/analytics', requireRole('supervisor'), ah(async (req, res) => {
   res.json({ days, daily, totals, by_status: byStatus, by_priority: byPriority, by_hour: byHour, agents: await agentPerformance(days) });
 }));
 
+// ---------------- Clear old chats (free VPS space) ----------------
+// Keeps everything from the chosen window (30 min / 1 h / 6 h / 12 h before the click)
+// and permanently deletes all older chats, messages, photos, voice notes and files.
+// Agents, settings, FAQ, canned replies and customer profiles are kept.
+const CLEAR_WINDOWS = { '30m': 30, '1h': 60, '6h': 360, '12h': 720 };
+function clearCutoff(keep) {
+  const minutes = CLEAR_WINDOWS[keep];
+  if (!minutes) fail(400, 'Choose 30m, 1h, 6h or 12h');
+  return new Date(Date.now() - minutes * 60000);
+}
+// attachments to delete: older than the cutoff, or belonging to a conversation that will be deleted
+const OLD_ATTACHMENTS = `(a.message_id IN (SELECT id FROM messages WHERE created_at < $1)
+  OR a.conversation_id IN (SELECT id FROM conversations WHERE last_message_at < $1)
+  OR (a.message_id IS NULL AND a.created_at < $1))`;
+
+async function clearPreview(cutoff) {
+  return one(`
+    SELECT
+      (SELECT COUNT(*) FROM conversations WHERE last_message_at < $1)::int AS conversations,
+      (SELECT COUNT(*) FROM conversations WHERE last_message_at < $1 AND status IN ('open','pending'))::int AS open_conversations,
+      (SELECT COUNT(*) FROM messages WHERE created_at < $1)::int AS messages,
+      (SELECT COUNT(*) FROM message_attachments a WHERE ${OLD_ATTACHMENTS})::int AS files,
+      (SELECT COALESCE(SUM(file_size),0) FROM message_attachments a WHERE ${OLD_ATTACHMENTS})::bigint AS bytes`, [cutoff]);
+}
+
+A.get('/cleanup/preview', requireRole('admin'), ah(async (req, res) => {
+  const cutoff = clearCutoff(req.query.keep);
+  const p = await clearPreview(cutoff);
+  res.json({ cutoff, ...p, bytes: Number(p.bytes) });
+}));
+
+let clearing = false;
+A.post('/cleanup', requireRole('admin'), ah(async (req, res) => {
+  if (clearing) fail(409, 'A clear is already running');
+  clearing = true;
+  try {
+    const keep = req.body.keep;
+    const cutoff = clearCutoff(keep);
+    const result = await tx(async (c) => {
+      const atts = (await c.query(`DELETE FROM message_attachments a WHERE ${OLD_ATTACHMENTS} RETURNING storage_key, thumb_key, file_size`, [cutoff])).rows;
+      const msgs = (await c.query(`DELETE FROM messages WHERE created_at < $1`, [cutoff])).rowCount;
+      const convs = (await c.query(`DELETE FROM conversations WHERE last_message_at < $1`, [cutoff])).rowCount; // events, tags, assignments go with them
+      await c.query(`DELETE FROM conversation_events WHERE created_at < $1`, [cutoff]);
+      return { atts, msgs, convs };
+    });
+
+    // remove the files from disk (after the database change is committed)
+    let filesDeleted = 0; let bytesFreed = 0;
+    const unlink = (key) => {
+      if (!key) return;
+      const f = path.join(config.UPLOAD_DIR, path.basename(key));
+      try { const st = fs.statSync(f); fs.unlinkSync(f); filesDeleted++; bytesFreed += st.size; } catch {}
+    };
+    for (const a of result.atts) { unlink(a.storage_key); unlink(a.thumb_key); }
+
+    // sweep leftovers: files older than the cutoff that no message uses (e.g. abandoned uploads)
+    const keepKeys = new Set();
+    (await many(`SELECT storage_key, thumb_key FROM message_attachments`)).forEach((r) => { keepKeys.add(r.storage_key); if (r.thumb_key) keepKeys.add(r.thumb_key); });
+    for (const name of fs.readdirSync(config.UPLOAD_DIR)) {
+      if (name.startsWith('.') || keepKeys.has(name)) continue;
+      const f = path.join(config.UPLOAD_DIR, name);
+      try { const st = fs.statSync(f); if (st.isFile() && st.mtime < cutoff) { fs.unlinkSync(f); filesDeleted++; bytesFreed += st.size; } } catch {}
+    }
+
+    // let PostgreSQL reuse the freed space (only this app's tables)
+    for (const t of ['message_attachments', 'messages', 'conversation_events', 'conversation_tags', 'conversation_assignments', 'conversations']) {
+      try { await q(`VACUUM (ANALYZE) ${t}`); } catch (e) { console.warn('vacuum', t, e.message); }
+    }
+
+    const summary = { keep, cutoff, conversations: result.convs, messages: result.msgs, files: filesDeleted, bytes_freed: bytesFreed };
+    await audit(req.user, 'chats.cleared', summary, ip(req));
+    io.to('agents').emit('inbox:cleared', { cutoff, by: req.user.name });
+    res.json({ ok: true, ...summary });
+  } finally {
+    clearing = false;
+  }
+}));
+
 // ---------------- Audit logs ----------------
 A.get('/audit-logs', requireRole('admin'), ah(async (req, res) => {
   const limit = int(req.query.limit, 50, 1, 200);
@@ -1291,7 +1369,12 @@ async function startConversation(s, { content, clientId, attachmentId, subject, 
 // Customer sends a message: handles reopen-vs-new for resolved chats
 async function customerSend(s, convId, { content, clientId, attachmentId, replyToId }) {
   if (!rateLimit(`cmsg:${s.customer_id}`, config.RATE_LIMITS.customerMsgPerMinute)) fail(429, 'You are sending messages too fast');
-  const c = await getCustomerConv(s, convId);
+  let c;
+  try { c = await getCustomerConv(s, convId); } catch (e) {
+    // the chat was cleared by an admin: continue in a new conversation
+    if (e.status === 404 && !attachmentId) return startConversation(s, { content, clientId });
+    throw e;
+  }
   if (c.status === 'resolved' || c.status === 'closed') {
     const general = await getSetting('general');
     const hours = Number(general.reopen_resolved_within_hours) || 0;
@@ -1398,6 +1481,11 @@ app.get('/widget.js', (req, res) => {
   res.sendFile(path.join(PUB, 'widget.js'));
 });
 app.get('/demo', (req, res) => res.sendFile(path.join(PUB, 'demo.html')));
+// full-screen chat page (Android app WebView / direct link)
+app.get('/chat', (req, res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(PUB, 'chat.html')); });
+// support logo files, usable from other sites (e.g. as the chat bubble image)
+app.use('/brand', (req, res, next) => { res.set('Access-Control-Allow-Origin', '*'); res.set('Cross-Origin-Resource-Policy', 'cross-origin'); next(); },
+  express.static(path.join(PUB, 'brand'), { maxAge: '7d' }));
 app.get('/health', ah(async (req, res) => { await q('SELECT 1'); res.json({ ok: true }); }));
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
